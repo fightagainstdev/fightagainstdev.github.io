@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>the 2nd trick 5CARDS IN ONE GO</title>
+    <url>/2023/08/30/GO/</url>
+    <content><![CDATA[]]></content>
+  </entry>
+  <entry>
     <title>My 1st card Trick</title>
     <url>/2023/08/27/My-1st-card-Trick/</url>
     <content><![CDATA[<p>welcome to my 1st post of card trick,and my github account is <a href="https://github.com/fightagainstdev?tab=repositories/" target="_blank">Here</a></p>
@@ -39,10 +44,5 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
 <p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank">Deployment</a></p>
 ]]></content>
-  </entry>
-  <entry>
-    <title>the 2nd trick 5CARDS IN ONE GO</title>
-    <url>/2023/08/30/GO/</url>
-    <content><![CDATA[]]></content>
   </entry>
 </search>
