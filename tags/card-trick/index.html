@@ -186,6 +186,8 @@
       Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
+  
+
 </footer>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
  <span id="busuanzi_container_site_pv">本站总访问量<span id="busuanzi_value_site_pv"></span>次</span>
@@ -216,6 +218,41 @@
 
 
 
+  
+<script src="https://cdn.jsdelivr.net/npm/valine@1.3.10/dist/Valine.min.js"></script>
+
+<script>
+    var GUEST_INFO = ['nick','mail','link'];
+    var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+        return GUEST_INFO.indexOf(item) > -1
+    });
+    var notify = 'true' == true;
+    var verify = 'true' == true;
+    new Valine({
+        el: '.vcomment',
+        notify: notify,
+        verify: verify,
+        appId: "FFwrCo1HwmB2H73blgJKBQ93-MdYXbMMI",
+        appKey: "HBu4yW9VXOz3SXSmItlfwC9W",
+        placeholder: "Just go go",
+        pageSize:'10',
+        avatar:'mm',
+        lang:'zh-cn'
+    });
+</script>
+
+<script>
+var _hmt = _hmt || [];
+(function(){
+   var hm = document.createElement('script');
+   hm.src = '//hm.baidu.com/hm.js?a48e9aecac02a2919d9ad64d264a9b83';
+   var s = document.getElementByTagName('script')[0];
+   s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+<script  async  src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
   </div>
 </body>
 </html>
