@@ -264,8 +264,8 @@
     var guest_info = 'nick,mail,link'.split(',').filter(function(item){
         return GUEST_INFO.indexOf(item) > -1
     });
-    var notify = 'false' == true;
-    var verify = 'false' == true;
+    var notify = 'true' == true;
+    var verify = 'true# valine verify code (true/false)' == true;
     new Valine({
         el: '.vcomment',
         notify: notify,
