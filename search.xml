@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>the 2nd trick 5CARDS IN ONE GO</title>
-    <url>/2023/08/30/GO/</url>
-    <content><![CDATA[]]></content>
-  </entry>
-  <entry>
     <title>My 1st card Trick</title>
     <url>/2023/08/27/My-1st-card-Trick/</url>
     <content><![CDATA[<p>welcome to my 1st post of card trick,and my github account is <a href="https://github.com/fightagainstdev?tab=repositories/">Here</a></p>
@@ -23,5 +18,10 @@
       <tags>
         <tag>card trick</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>the 2nd trick 5CARDS IN ONE GO</title>
+    <url>/2023/08/30/GO/</url>
+    <content><![CDATA[]]></content>
   </entry>
 </search>
