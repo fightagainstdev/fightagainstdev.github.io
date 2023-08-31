@@ -1,52 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-  
-    
-    <entry>
-      <title>the 2nd trick 5CARDS IN ONE GO</title>
-      <link href="/2023/08/30/GO/"/>
-      <url>/2023/08/30/GO/</url>
-      
-        <content type="html"><![CDATA[]]></content>
-      
-      
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>My 1st card Trick</title>
-      <link href="/2023/08/27/My-1st-card-Trick/"/>
-      <url>/2023/08/27/My-1st-card-Trick/</url>
-      
-        <content type="html"><![CDATA[<p>welcome to my 1st post of card trick,and my github account is <a href="https://github.com/fightagainstdev?tab=repositories/" target="_blank">Here</a></p><p>接下来向您展示的是我将用到的七副牌（象征着1周中的7天）</p><p><img src="https://s1.ax1x.com/2023/08/30/pPdywZt.jpg" alt="全部来自bicycle" loading="lazy" class="φbp"></p><p>####整副牌从上至下，从左至右依次是</p><blockquote><p>-黑色常规 奥德赛 催眠 建筑奇迹<br>-暗号!(最贵的) 海王 狮子座<br><em><strong>这个魔术被称为 CHICAGO OPENER</strong></em></p></blockquote><h3 id="用到的手法：-double-lift">用到的手法： <a href="https://zhuanlan.zhihu.com/p/103554597">double lift</a><a title="#用到的手法：-double-lift" href="#用到的手法：-double-lift"></a></h3><p><font color='' size=4 face='楷体'>首先我们让观众抽一张牌，之后让观众记住对应牌的点数与花色，我们将牌一张张或多张发下，让观众随意喊停并在停的位置盖上所有牌。接着一打响指后，整副牌就会多出一张与其他牌颜色不同的牌（1层效果）且此牌为观众的牌。将此牌放在一边。再重复前述步骤，发现放在一边的牌变成了第二张牌。</p><blockquote><p>Just do it, anything is possible.</p><footer><strong>slogan</strong><cite>from Nike</cite></footer></blockquote><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alert(&#x27;welcome to magic world!&#x27;);</span><br></pre></td></tr></table></figure>]]></content>
-      
-      
-      
-        <tags>
-            
-            <tag> card trick </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>Hello World</title>
-      <link href="/2023/08/27/hello-world/"/>
-      <url>/2023/08/27/hello-world/</url>
-      
-        <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank">GitHub</a>.</p><h2 id="quick-start">Quick Start<a title="#quick-start" href="#quick-start"></a></h2><h3 id="create-a-new-post">Create a new post<a title="#create-a-new-post" href="#create-a-new-post"></a></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank">Writing</a></p><h3 id="run-server">Run server<a title="#run-server" href="#run-server"></a></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html" target="_blank">Server</a></p><h3 id="generate-static-files">Generate static files<a title="#generate-static-files" href="#generate-static-files"></a></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank">Generating</a></p><h3 id="deploy-to-remote-sites">Deploy to remote sites<a title="#deploy-to-remote-sites" href="#deploy-to-remote-sites"></a></h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank">Deployment</a></p>]]></content>
-      
-      
-      
-    </entry>
-    
-    
-  
-  
+<search>
+  <entry>
+    <title>the 2nd trick 5CARDS IN ONE GO</title>
+    <url>/2023/08/30/GO/</url>
+    <content><![CDATA[]]></content>
+  </entry>
+  <entry>
+    <title>My 1st card Trick</title>
+    <url>/2023/08/27/My-1st-card-Trick/</url>
+    <content><![CDATA[<p>welcome to my 1st post of card trick,and my github account is <a href="https://github.com/fightagainstdev?tab=repositories/" target="_blank">Here</a></p>
+<p>接下来向您展示的是我将用到的七副牌（象征着1周中的7天）</p>
+<p><img src="https://s1.ax1x.com/2023/08/30/pPdywZt.jpg" alt="全部来自bicycle" loading="lazy" class="φbp"></p>
+<p>####整副牌从上至下，从左至右依次是</p>
+<blockquote>
+<p>-黑色常规 奥德赛 催眠 建筑奇迹<br>
+-暗号!(最贵的) 海王 狮子座<br>
+<em><strong>这个魔术被称为 CHICAGO OPENER</strong></em></p>
+</blockquote>
+<h3 id="用到的手法：-double-lift">用到的手法： <a href="https://zhuanlan.zhihu.com/p/103554597">double lift</a><a title="#用到的手法：-double-lift" href="#用到的手法：-double-lift"></a></h3>
+<p><font color='' size=4 face='楷体'>首先我们让观众抽一张牌，之后让观众记住对应牌的点数与花色，我们将牌一张张或多张发下，让观众随意喊停并在停的位置盖上所有牌。接着一打响指后，整副牌就会多出一张与其他牌颜色不同的牌（1层效果）且此牌为观众的牌。将此牌放在一边。再重复前述步骤，发现放在一边的牌变成了第二张牌。</p>
+<blockquote><p>Just do it, anything is possible.</p>
+<footer><strong>slogan</strong><cite>from Nike</cite></footer></blockquote>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">alert(&#x27;welcome to magic world!&#x27;);</span><br></pre></td></tr></table></figure>]]></content>
+      <tags>
+        <tag>card trick</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/2023/08/27/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank">GitHub</a>.</p>
+<h2 id="quick-start">Quick Start<a title="#quick-start" href="#quick-start"></a></h2>
+<h3 id="create-a-new-post">Create a new post<a title="#create-a-new-post" href="#create-a-new-post"></a></h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank">Writing</a></p>
+<h3 id="run-server">Run server<a title="#run-server" href="#run-server"></a></h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank">Server</a></p>
+<h3 id="generate-static-files">Generate static files<a title="#generate-static-files" href="#generate-static-files"></a></h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank">Generating</a></p>
+<h3 id="deploy-to-remote-sites">Deploy to remote sites<a title="#deploy-to-remote-sites" href="#deploy-to-remote-sites"></a></h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank">Deployment</a></p>
+]]></content>
+  </entry>
 </search>
