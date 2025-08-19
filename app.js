@@ -19,18 +19,25 @@ const storage = firebase.storage();
 // 显示消息的辅助函数
 function showMessage(message, isError = false) {
     const messageDiv = document.getElementById('auth-message');
-    messageDiv.textContent = message;
-    messageDiv.className = isError ? 'message error' : 'message success';
-    messageDiv.style.display = 'block';
-    setTimeout(() => {
-        messageDiv.style.display = 'none';
-    }, 5000);
+    if (messageDiv) {
+        messageDiv.textContent = message;
+        messageDiv.className = isError ? 'message error' : 'message success';
+        messageDiv.style.display = 'block';
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    } else {
+        // Fallback to alert if message div not found
+        alert(message);
+    }
 }
 
 // 禁用/启用按钮的辅助函数
 function setButtonsDisabled(disabled) {
-    document.getElementById('register-btn').disabled = disabled;
-    document.getElementById('login-btn').disabled = disabled;
+    const registerBtn = document.getElementById('register-btn');
+    const loginBtn = document.getElementById('login-btn');
+    if (registerBtn) registerBtn.disabled = disabled;
+    if (loginBtn) loginBtn.disabled = disabled;
 }
 
 // 用户状态监听
@@ -58,7 +65,10 @@ auth.onAuthStateChanged(user => {
 function showSection(sectionId) {
     const sections = ['main-section', 'public-square', 'tag-square', 'archive', 'search-section', 'profile-section'];
     sections.forEach(id => {
-        document.getElementById(id).style.display = id === sectionId ? 'block' : 'none';
+        const element = document.getElementById(id);
+        if (element) {
+            element.style.display = id === sectionId ? 'block' : 'none';
+        }
     });
 }
 
@@ -199,9 +209,13 @@ async function loadProfile() {
         const doc = await db.collection('users').doc(user.uid).get();
         if (doc.exists) {
             const data = doc.data();
-            document.getElementById('username-display').textContent = `昵称: ${data.userName}`;
-            document.getElementById('avatar-preview').src = data.avatarUrl;
-            document.getElementById('username-input').value = data.userName;
+            const usernameDisplay = document.getElementById('username-display');
+            const avatarPreview = document.getElementById('avatar-preview');
+            const usernameInput = document.getElementById('username-input');
+            
+            if (usernameDisplay) usernameDisplay.textContent = `昵称: ${data.userName}`;
+            if (avatarPreview) avatarPreview.src = data.avatarUrl;
+            if (usernameInput) usernameInput.value = data.userName;
         }
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -214,9 +228,13 @@ async function updateProfile() {
         const user = auth.currentUser;
         if (!user) return;
         
-        const username = document.getElementById('username-input').value.trim();
-        const avatarFile = document.getElementById('avatar-upload').files[0];
-        let avatarUrl = document.getElementById('avatar-preview').src;
+        const usernameInput = document.getElementById('username-input');
+        const avatarUpload = document.getElementById('avatar-upload');
+        const avatarPreview = document.getElementById('avatar-preview');
+        
+        const username = usernameInput ? usernameInput.value.trim() : '';
+        const avatarFile = avatarUpload ? avatarUpload.files[0] : null;
+        let avatarUrl = avatarPreview ? avatarPreview.src : 'https://via.placeholder.com/100x100?text=Avatar';
 
         if (avatarFile) {
             const avatarRef = storage.ref(`avatars/${user.uid}/${avatarFile.name}`);
@@ -239,26 +257,51 @@ async function updateProfile() {
     }
 }
 
+// 转换图片为Base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
 // 上传照片并生成故事
 async function uploadAndGenerate() {
-    const file = document.getElementById('photo-upload').files[0];
+    const fileInput = document.getElementById('photo-upload');
+    const file = fileInput ? fileInput.files[0] : null;
+    const storyOutput = document.getElementById('story-output');
+    
     if (!file) {
         alert('请选择一张照片');
         return;
     }
 
-    document.getElementById('story-output').innerHTML = '<p>正在调用X AI生成故事...</p>';
+    if (storyOutput) {
+        storyOutput.innerHTML = '<p>正在上传照片并生成故事...</p>';
+    }
 
     try {
-        // 上传图片到 Firebase Storage
         const user = auth.currentUser;
+        if (!user) {
+            throw new Error('用户未登录');
+        }
+
+        // 上传图片到 Firebase Storage
         const photoRef = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
+        console.log('Uploading file to Firebase Storage...');
         await photoRef.put(file);
         const photoUrl = await photoRef.getDownloadURL();
+        console.log('File uploaded successfully, URL:', photoUrl);
 
+        // 转换图片为Base64用于AI分析
+        const base64Image = await fileToBase64(file);
+        
         // 调用 X AI 生成故事
         let story = "";
         try {
+            console.log('Calling X AI API...');
             const response = await fetch("https://api.x.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -266,29 +309,53 @@ async function uploadAndGenerate() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "grok-beta",
+                    model: "grok-vision-beta",
                     messages: [
                         {
                             role: "system",
-                            content: "你是一个写作助手，帮用户根据照片生成有趣的故事。"
+                            content: "你是一个创意写作助手，帮用户根据照片生成有趣的故事。请用中文回答，故事应该生动有趣，大约100-200字。"
                         },
                         {
                             role: "user",
-                            content: `请根据这张照片生成一个简短的故事: ${photoUrl}`
+                            content: [
+                                {
+                                    type: "text",
+                                    text: "请根据这张照片生成一个简短而有趣的故事："
+                                },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: base64Image
+                                    }
+                                }
+                            ]
                         }
-                    ]
+                    ],
+                    max_tokens: 1000,
+                    temperature: 0.7
                 })
             });
             
+            console.log('API Response status:', response.status);
+            
             if (!response.ok) {
-                throw new Error(`API请求失败: ${response.status}`);
+                const errorText = await response.text();
+                console.error('API Error response:', errorText);
+                throw new Error(`API请求失败: ${response.status} - ${errorText}`);
             }
             
             const data = await response.json();
-            story = data.choices[0].message.content;
+            console.log('API Response data:', data);
+            
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                story = data.choices[0].message.content;
+            } else {
+                throw new Error('API返回数据格式不正确');
+            }
+            
         } catch (err) {
             console.error('AI API error:', err);
-            story = "生成故事时出错，请稍后再试。这是一张美好的照片，值得记录。";
+            story = `生成故事时出错：${err.message}。不过这是一张美好的照片，值得记录。让我们想象一下这张照片背后可能隐藏着什么有趣的故事...`;
         }
 
         // 提取标签
@@ -296,9 +363,14 @@ async function uploadAndGenerate() {
 
         // 获取用户资料
         const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
+        const userData = userDoc.exists ? userDoc.data() : { userName: '匿名用户', avatarUrl: 'https://via.placeholder.com/100x100?text=Avatar' };
+
+        // 获取隐私设置
+        const privacySelect = document.getElementById('privacy');
+        const privacy = privacySelect ? privacySelect.value : 'public';
 
         // 保存到数据库
+        console.log('Saving to database...');
         await db.collection('stories').add({
             userId: user.uid,
             userName: userData.userName,
@@ -306,39 +378,53 @@ async function uploadAndGenerate() {
             photoUrl,
             story,
             tags,
-            privacy: document.getElementById('privacy').value,
+            privacy,
             likes: 0,
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // 刷新页面数据
         loadPublicSquare();
         loadArchive();
         loadTags();
 
-        document.getElementById('story-output').innerHTML = `
-            <div class="story-result">
-                <p>${story}</p>
-                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-            </div>
-        `;
+        // 显示结果
+        if (storyOutput) {
+            storyOutput.innerHTML = `
+                <div class="story-result">
+                    <h3>生成的故事：</h3>
+                    <p>${story}</p>
+                    <img src="${photoUrl}" alt="上传的照片" style="max-width: 100%; margin-top: 10px; border-radius: 8px;">
+                    <p><strong>标签：</strong> ${tags.join(', ')}</p>
+                    <p><strong>隐私设置：</strong> ${privacy === 'public' ? '公开' : '私密'}</p>
+                </div>
+            `;
+        }
+        
+        console.log('Story generation completed successfully');
         
     } catch (error) {
         console.error('Upload error:', error);
-        document.getElementById('story-output').innerHTML = '<p>上传失败: ' + error.message + '</p>';
+        if (storyOutput) {
+            storyOutput.innerHTML = `<p style="color: red;">上传失败: ${error.message}</p>`;
+        }
+        alert(`上传失败: ${error.message}`);
     }
 }
 
 // 提取标签
 function extractTags(text) {
     const words = text.split(/[\s，。！？、]+/);
-    return words.filter(w => w.length > 2 && !['一个', '的', '了', '在', '是', '有', '这', '那'].includes(w)).slice(0, 5);
+    return words.filter(w => w.length > 2 && !['一个', '的', '了', '在', '是', '有', '这', '那', '就', '都', '会', '说', '我', '你', '他'].includes(w)).slice(0, 5);
 }
 
 // 加载公开广场
 async function loadPublicSquare() {
     try {
         const square = document.getElementById('public-square');
+        if (!square) return;
+        
         square.innerHTML = '<h2>公开广场</h2>';
         
         const querySnapshot = await db.collection('stories')
@@ -356,13 +442,13 @@ async function loadPublicSquare() {
                     <img src="${data.userAvatar}" alt="User avatar" class="avatar">
                     <span>${data.userName}</span>
                 </div>
-                <img src="${data.photoUrl}" alt="Story image">
+                <img src="${data.photoUrl}" alt="Story image" style="max-width: 100%; border-radius: 8px;">
                 <p>${data.story}</p>
-                <p>标签: ${data.tags.join(', ')}</p>
-                <p>点赞: ${data.likes}</p>
-                <button onclick="likeStory('${doc.id}')">点赞</button>
-                <input id="comment-${doc.id}" placeholder="添加评论...">
-                <button onclick="addComment('${doc.id}')">评论</button>
+                <p><strong>标签:</strong> ${data.tags.join(', ')}</p>
+                <p><strong>点赞:</strong> ${data.likes}</p>
+                <button onclick="likeStory('${doc.id}')">👍 点赞</button>
+                <input id="comment-${doc.id}" placeholder="添加评论..." style="margin: 5px 0;">
+                <button onclick="addComment('${doc.id}')">💬 评论</button>
                 <div class="comments">
                     ${data.comments ? data.comments.map(c => `<div class="comment">${c}</div>`).join('') : ''}
                 </div>
@@ -389,19 +475,22 @@ async function likeStory(id) {
 // 添加评论
 async function addComment(id) {
     try {
-        const comment = document.getElementById(`comment-${id}`).value.trim();
+        const commentInput = document.getElementById(`comment-${id}`);
+        const comment = commentInput ? commentInput.value.trim() : '';
         if (!comment) return;
         
         const user = auth.currentUser;
+        if (!user) return;
+        
         const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
+        const userData = userDoc.exists ? userDoc.data() : { userName: '匿名用户' };
         const ref = db.collection('stories').doc(id);
         
         await ref.update({ 
             comments: firebase.firestore.FieldValue.arrayUnion(`${userData.userName}: ${comment}`) 
         });
         
-        document.getElementById(`comment-${id}`).value = '';
+        if (commentInput) commentInput.value = '';
         loadPublicSquare();
         loadArchive();
     } catch (error) {
@@ -413,6 +502,8 @@ async function addComment(id) {
 async function loadArchive() {
     try {
         const archive = document.getElementById('archive');
+        if (!archive) return;
+        
         archive.innerHTML = '<h2>我的存档</h2>';
         
         const user = auth.currentUser;
@@ -432,11 +523,11 @@ async function loadArchive() {
                     <img src="${data.userAvatar}" alt="User avatar" class="avatar">
                     <span>${data.userName}</span>
                 </div>
-                <img src="${data.photoUrl}" alt="Story image">
+                <img src="${data.photoUrl}" alt="Story image" style="max-width: 100%; border-radius: 8px;">
                 <p>${data.story}</p>
-                <p>隐私: ${data.privacy}</p>
-                <p>标签: ${data.tags.join(', ')}</p>
-                <p>点赞: ${data.likes}</p>
+                <p><strong>隐私:</strong> ${data.privacy === 'public' ? '公开' : '私密'}</p>
+                <p><strong>标签:</strong> ${data.tags.join(', ')}</p>
+                <p><strong>点赞:</strong> ${data.likes}</p>
                 <div class="comments">
                     ${data.comments ? data.comments.map(c => `<div class="comment">${c}</div>`).join('') : ''}
                 </div>
@@ -452,6 +543,8 @@ async function loadArchive() {
 async function loadTags() {
     try {
         const tagSquare = document.getElementById('tag-square');
+        if (!tagSquare) return;
+        
         tagSquare.innerHTML = '<h2>标签广场</h2>';
         
         const tagsMap = {};
@@ -482,7 +575,7 @@ async function loadTags() {
                         <img src="${item.userAvatar}" alt="User avatar" class="avatar">
                         <span>${item.userName}</span>
                     </div>
-                    <p>${item.story.slice(0, 50)}... <img src="${item.photoUrl}" alt="Story image" style="width: 50px; height: 50px; object-fit: cover;"></p>
+                    <p>${item.story.slice(0, 50)}... <img src="${item.photoUrl}" alt="Story image" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"></p>
                 `;
             });
             tagSquare.appendChild(card);
@@ -495,10 +588,13 @@ async function loadTags() {
 // 搜索故事
 async function searchStories() {
     try {
-        const keyword = document.getElementById('search-keyword').value.toLowerCase().trim();
+        const keywordInput = document.getElementById('search-keyword');
+        const keyword = keywordInput ? keywordInput.value.toLowerCase().trim() : '';
         if (!keyword) return;
         
         const results = document.getElementById('search-results');
+        if (!results) return;
+        
         results.innerHTML = '';
         
         const allStories = [];
@@ -520,9 +616,9 @@ async function searchStories() {
                     <img src="${story.userAvatar}" alt="User avatar" class="avatar">
                     <span>${story.userName}</span>
                 </div>
-                <img src="${story.photoUrl}" alt="Story image">
-                <p>预览: ${story.story.slice(0, 100)}...</p>
-                <p>匹配度: ${story.matchCount}</p>
+                <img src="${story.photoUrl}" alt="Story image" style="max-width: 100%; border-radius: 8px;">
+                <p><strong>预览:</strong> ${story.story.slice(0, 100)}...</p>
+                <p><strong>匹配度:</strong> ${story.matchCount}</p>
             `;
             results.appendChild(card);
         });
