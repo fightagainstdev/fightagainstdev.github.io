@@ -1,21 +1,26 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photo Story</title>
+    <title>曲睿故事生成器</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK v8 (Compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <!-- TensorFlow.js for object detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest"></script>
 </head>
 <body>
     <div class="container">
-        <div class="sidebar">
+        <!-- 侧边栏 -->
+        <nav class="sidebar">
             <div class="sidebar-header">
-                <h2>Photo Story</h2>
+                <h2>曲睿故事</h2>
             </div>
             <ul>
                 <li><button onclick="showSection('main-section')">上传故事</button></li>
@@ -26,51 +31,76 @@
                 <li><button onclick="showSection('profile-section')">我的资料</button></li>
                 <li><button onclick="logout()">登出</button></li>
             </ul>
-        </div>
-        <div class="main-content">
+        </nav>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 登录/注册 -->
             <div id="auth-section" class="section">
-                <h2>登录/注册</h2>
-                <input type="email" id="email" placeholder="邮箱">
-                <input type="password" id="password" placeholder="密码">
-                <div class="button-group">
-                    <button onclick="register()">注册</button>
-                    <button onclick="login()">登录</button>
+                <div class="card">
+                    <h1>登录/注册</h1>
+                    <div id="auth-message" class="message" style="display: none;"></div>
+                    <input type="email" id="email" placeholder="邮箱" required>
+                    <input type="password" id="password" placeholder="密码" required>
+                    <div class="button-group">
+                        <button onclick="register()" id="register-btn">注册</button>
+                        <button onclick="login()" id="login-btn">登录</button>
+                    </div>
+                    <a href="#" onclick="resetPassword()">忘记密码？</a>
                 </div>
-                <a href="#" onclick="resetPassword()">忘记密码？</a>
             </div>
+
+            <!-- 上传故事 -->
             <div id="main-section" class="section" style="display: none;">
-                <h2>上传照片生成故事</h2>
-                <input type="file" id="photo-upload" accept="image/*">
-                <select id="privacy">
-                    <option value="public">公开</option>
-                    <option value="private">私密</option>
-                </select>
-                <button onclick="uploadAndGenerate()">上传并生成</button>
-                <div id="story-output" class="story-output"></div>
+                <div class="card">
+                    <h1>上传照片生成故事</h1>
+                    <input type="file" id="photo-upload" accept="image/*">
+                    <select id="privacy">
+                        <option value="public">公开</option>
+                        <option value="private">私密</option>
+                    </select>
+                    <button onclick="uploadAndGenerate()">上传并生成</button>
+                    <div id="story-output" class="story-output"></div>
+                </div>
             </div>
+
+            <!-- 广场 -->
             <div id="public-square" class="section" style="display: none;"></div>
+
+            <!-- 标签广场 -->
             <div id="tag-square" class="section" style="display: none;"></div>
+
+            <!-- 存档 -->
             <div id="archive" class="section" style="display: none;"></div>
+
+            <!-- 搜索 -->
             <div id="search-section" class="section" style="display: none;">
-                <h2>搜索故事</h2>
-                <div class="search-bar">
-                    <input type="text" id="search-keyword" placeholder="输入关键词">
-                    <button onclick="searchStories()">搜索</button>
+                <div class="card">
+                    <h1>搜索故事</h1>
+                    <div class="search-bar">
+                        <input type="text" id="search-keyword" placeholder="输入关键字...">
+                        <button onclick="searchStories()">搜索</button>
+                    </div>
+                    <div id="search-results"></div>
                 </div>
-                <div id="search-results"></div>
             </div>
+
+            <!-- 用户资料 -->
             <div id="profile-section" class="section" style="display: none;">
-                <h2>我的资料</h2>
-                <div class="profile-info">
-                    <img id="avatar-preview" src="default-avatar.png" alt="User avatar" class="avatar">
-                    <span id="username-display">加载中...</span>
+                <div class="card">
+                    <h1>我的资料</h1>
+                    <div class="profile-info">
+                        <img id="avatar-preview" src="default-avatar.png" alt="Avatar" class="avatar">
+                        <p id="username-display">加载中...</p>
+                    </div>
+                    <input type="text" id="username-input" placeholder="输入昵称">
+                    <input type="file" id="avatar-upload" accept="image/*">
+                    <button onclick="updateProfile()">更新资料</button>
                 </div>
-                <input type="text" id="username-input" placeholder="昵称">
-                <input type="file" id="avatar-upload" accept="image/*">
-                <button onclick="updateProfile()">更新资料</button>
             </div>
-        </div>
+        </main>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>
