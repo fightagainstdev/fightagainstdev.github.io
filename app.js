@@ -1,4 +1,3 @@
-// Firebase配置（替换为你的Firebase项目配置）
 const firebaseConfig = {
     apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSllG0Pg",
     authDomain: "photo-story-app.firebaseapp.com",
@@ -8,9 +7,8 @@ const firebaseConfig = {
     appId: "1:571174185577:web:35e312c16feb1efb6b10f8"
 };
 
-// ❗️已移除 XAI_API_KEY，改用云函数（后端持有密钥）
 
-// Initialize Firebase
+// 初始化 Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -27,7 +25,10 @@ const userMetaCache = new Map();
 // 辅助函数：消息提示
 function showMessage(message, isError = false) {
     const messageDiv = document.getElementById('auth-message');
-    if (!messageDiv) return;
+    if (!messageDiv) {
+        console.error('未找到 auth-message 元素');
+        return;
+    }
     messageDiv.textContent = message;
     messageDiv.className = isError ? 'message error' : 'message success';
     messageDiv.style.display = 'block';
@@ -53,30 +54,45 @@ function showSection(sectionId) {
 
 // 监听登录状态
 auth.onAuthStateChanged(user => {
-    console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
+    console.log('Auth state changed:', user ? `User logged in: ${user.uid}` : 'User logged out');
     if (user) {
         document.getElementById('auth-section').style.display = 'none';
-        document.getElementById('main-section').style.display = 'block';
+        showSection('main-section');
         loadPublicSquare();
         loadArchive();
         loadTags();
         loadProfile();
-        // 默认加载一下联系人列表（不切换到界面）
         loadMessagesList({ silent: true });
     } else {
         document.getElementById('auth-section').style.display = 'block';
-        ['main-section','public-square','tag-square','archive','search-section','profile-section','messages-section']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        sections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
     }
 });
 
 // 注册
 async function register() {
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    if (!emailInput || !passwordInput) {
+        console.error('未找到 email 或 password 输入框');
+        showMessage('页面加载错误，请刷新重试', true);
+        return;
+    }
 
-    if (!email || !password) return showMessage('请输入邮箱和密码', true);
-    if (password.length < 6) return showMessage('密码至少需要6位字符', true);
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+        showMessage('请输入邮箱和密码', true);
+        return;
+    }
+    if (password.length < 6) {
+        showMessage('密码至少需要6位字符', true);
+        return;
+    }
 
     setButtonsDisabled(true);
     showMessage('正在注册...');
@@ -95,13 +111,27 @@ async function register() {
 
         showMessage('注册成功！');
     } catch (error) {
-        console.error('Registration error:', error);
+        console.error('注册失败:', {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+        });
         let errorMessage = '注册失败';
         switch (error.code) {
-            case 'auth/email-already-in-use': errorMessage = '该邮箱已被注册'; break;
-            case 'auth/invalid-email': errorMessage = '邮箱格式不正确'; break;
-            case 'auth/weak-password': errorMessage = '密码强度不够'; break;
-            default: errorMessage = `注册失败: ${error.message}`;
+            case 'auth/email-already-in-use':
+                errorMessage = '该邮箱已被注册';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = '邮箱格式不正确';
+                break;
+            case 'auth/weak-password':
+                errorMessage = '密码强度不够';
+                break;
+            case 'auth/too-many-requests':
+                errorMessage = '请求过于频繁，请稍后再试';
+                break;
+            default:
+                errorMessage = `注册失败: ${error.message}`;
         }
         showMessage(errorMessage, true);
     } finally {
@@ -111,10 +141,21 @@ async function register() {
 
 // 登录
 async function login() {
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    if (!emailInput || !passwordInput) {
+        console.error('未找到 email 或 password 输入框');
+        showMessage('页面加载错误，请刷新重试', true);
+        return;
+    }
 
-    if (!email || !password) return showMessage('请输入邮箱和密码', true);
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+        showMessage('请输入邮箱和密码', true);
+        return;
+    }
 
     setButtonsDisabled(true);
     showMessage('正在登录...');
@@ -123,14 +164,27 @@ async function login() {
         await auth.signInWithEmailAndPassword(email, password);
         showMessage('登录成功！');
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('登录失败:', {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+        });
         let errorMessage = '登录失败';
         switch (error.code) {
-            case 'auth/user-not-found': errorMessage = '用户不存在'; break;
-            case 'auth/wrong-password': errorMessage = '密码错误'; break;
-            case 'auth/invalid-email': errorMessage = '邮箱格式不正确'; break;
-            case 'auth/too-many-requests': errorMessage = '尝试次数过多，请稍后再试'; break;
-            default: errorMessage = `登录失败: ${error.message}`;
+            case 'auth/user-not-found':
+                errorMessage = '用户不存在';
+                break;
+            case 'auth/wrong-password':
+                errorMessage = '密码错误';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = '邮箱格式不正确';
+                break;
+            case 'auth/too-many-requests':
+                errorMessage = '尝试次数过多，请稍后再试';
+                break;
+            default:
+                errorMessage = `登录失败: ${error.message}`;
         }
         showMessage(errorMessage, true);
     } finally {
@@ -140,18 +194,34 @@ async function login() {
 
 // 登出
 function logout() {
-    if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
-    auth.signOut().catch(err => console.error('Logout error:', err));
+    if (messagesUnsubscribe) {
+        messagesUnsubscribe();
+        messagesUnsubscribe = null;
+    }
+    auth.signOut().catch(err => console.error('登出失败:', err));
 }
 
 // 重置密码
 function resetPassword() {
-    const email = document.getElementById('email').value.trim();
-    if (!email) return showMessage('请先输入邮箱', true);
+    const emailInput = document.getElementById('email');
+    if (!emailInput) {
+        console.error('未找到 email 输入框');
+        showMessage('页面加载错误，请刷新重试', true);
+        return;
+    }
+
+    const email = emailInput.value.trim();
+    if (!email) {
+        showMessage('请先输入邮箱', true);
+        return;
+    }
 
     auth.sendPasswordResetEmail(email)
         .then(() => showMessage('密码重置邮件已发送，请检查邮箱'))
-        .catch(error => showMessage('发送重置邮件失败: ' + error.message, true));
+        .catch(error => {
+            console.error('重置密码失败:', error);
+            showMessage(`发送重置邮件失败: ${error.message}`, true);
+        });
 }
 
 // 加载用户资料
@@ -162,12 +232,15 @@ async function loadProfile() {
         const doc = await db.collection('users').doc(user.uid).get();
         if (doc.exists) {
             const data = doc.data();
-            document.getElementById('username-display').textContent = `昵称: ${data.userName}`;
-            document.getElementById('avatar-preview').src = data.avatarUrl;
-            document.getElementById('username-input').value = data.userName;
+            const usernameDisplay = document.getElementById('username-display');
+            const avatarPreview = document.getElementById('avatar-preview');
+            const usernameInput = document.getElementById('username-input');
+            if (usernameDisplay) usernameDisplay.textContent = `昵称: ${data.userName}`;
+            if (avatarPreview) avatarPreview.src = data.avatarUrl;
+            if (usernameInput) usernameInput.value = data.userName;
         }
     } catch (error) {
-        console.error('Error loading profile:', error);
+        console.error('加载用户资料失败:', error);
     }
 }
 
@@ -175,11 +248,22 @@ async function loadProfile() {
 async function updateProfile() {
     try {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user) {
+            alert('请先登录');
+            return;
+        }
 
-        const username = document.getElementById('username-input').value.trim();
-        const avatarFile = document.getElementById('avatar-upload').files[0];
-        let avatarUrl = document.getElementById('avatar-preview').src;
+        const usernameInput = document.getElementById('username-input');
+        const avatarUpload = document.getElementById('avatar-upload');
+        if (!usernameInput || !avatarUpload) {
+            console.error('未找到 username-input 或 avatar-upload 元素');
+            alert('页面加载错误，请刷新重试');
+            return;
+        }
+
+        const username = usernameInput.value.trim();
+        const avatarFile = avatarUpload.files[0];
+        let avatarUrl = document.getElementById('avatar-preview')?.src;
 
         if (avatarFile) {
             const avatarRef = storage.ref(`avatars/${user.uid}/${Date.now()}_${avatarFile.name}`);
@@ -197,23 +281,37 @@ async function updateProfile() {
         loadArchive();
         alert('资料更新成功');
     } catch (error) {
-        console.error('Error updating profile:', error);
-        alert('更新失败: ' + error.message);
+        console.error('更新用户资料失败:', error);
+        alert(`更新失败: ${error.message}`);
     }
 }
 
 // 上传照片并生成故事（通过云函数调用 X AI）
-        const tags = extractTags(story);
-// 上传照片并生成故事（通过云函数调用 X AI）
 async function uploadAndGenerate() {
-    const file = document.getElementById('photo-upload').files[0];
-    if (!file) return alert('请选择一张照片');
+    const fileInput = document.getElementById('photo-upload');
+    if (!fileInput) {
+        console.error('未找到 photo-upload 元素');
+        alert('页面加载错误，请刷新重试');
+        return;
+    }
 
-    document.getElementById('story-output').innerHTML = '<p>正在通过云函数调用 QURUI AI 生成故事...</p>';
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('请选择一张照片');
+        return;
+    }
+
+    const storyOutput = document.getElementById('story-output');
+    if (storyOutput) {
+        storyOutput.innerHTML = '<p>正在通过云函数调用 X AI 生成故事...</p>';
+    }
 
     try {
         const user = auth.currentUser;
-        if (!user) return alert('请先登录');
+        if (!user) {
+            alert('请先登录');
+            return;
+        }
 
         // 上传图片
         const photoRef = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
@@ -222,34 +320,18 @@ async function uploadAndGenerate() {
         const photoUrl = await photoRef.getDownloadURL();
         console.log('图片上传成功，URL:', photoUrl);
 
-        // 确保 photoUrl 存在
         if (!photoUrl) {
             throw new Error('图片上传失败，未获得有效URL');
         }
 
-        // 调用云函数（后端保密 XAI_API_KEY）
-        let story = '';
-        try {
-            console.log('调用云函数，参数:', { photoUrl });
-            const callable = functions.httpsCallable('generateStory');
-            const resp = await callable({ photoUrl: photoUrl }); // 明确传递参数
-            console.log('云函数返回:', resp);
-            
-            // 兼容后端返回结构：直接 data，或 data.choices[0].message.content
-            const d = resp.data || {};
-            if (d.story) {
-                story = d.story;
-            } else if (d.choices && d.choices[0]?.message?.content) {
-                story = d.choices[0].message.content;
-            } else if (typeof d === 'string') {
-                story = d;
-            } else {
-                story = '（后端未返回内容）';
-            }
-        } catch (err) {
-            console.error('generateStory 调用失败:', err);
-            story = `生成故事时出错: ${err.message || err.toString()}`;
-        }
+        // 调用云函数
+        console.log('调用云函数，参数:', { photoUrl });
+        const callable = functions.httpsCallable('generateStory');
+        const resp = await callable({ photoUrl });
+        console.log('云函数返回:', resp);
+
+        const d = resp.data || {};
+        let story = d.story || '抱歉，无法生成故事';
 
         // 提取标签
         const tags = extractTags(story);
@@ -266,42 +348,7 @@ async function uploadAndGenerate() {
             photoUrl,
             story,
             tags,
-            privacy: document.getElementById('privacy').value,
-            likes: 0,
-            comments: [],
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        // 刷新页面数据
-        loadPublicSquare();
-        loadArchive();
-        loadTags();
-
-        // 显示结果
-        document.getElementById('story-output').innerHTML = `
-            <div class="story-result">
-                <p>${escapeHtml(story)}</p>
-                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-            </div>
-        `;
-    } catch (error) {
-        console.error('Upload error:', error);
-        document.getElementById('story-output').innerHTML = '<p>上传失败: ' + error.message + '</p>';
-    }
-}
-        // 用户资料
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
-
-        // 保存到数据库
-        await db.collection('stories').add({
-            userId: user.uid,
-            userName: userData.userName,
-            userAvatar: userData.avatarUrl,
-            photoUrl,
-            story,
-            tags,
-            privacy: document.getElementById('privacy').value,
+            privacy: document.getElementById('privacy')?.value || 'public',
             likes: 0,
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -311,15 +358,22 @@ async function uploadAndGenerate() {
         loadArchive();
         loadTags();
 
-        document.getElementById('story-output').innerHTML = `
-            <div class="story-result">
-                <p>${escapeHtml(story)}</p>
-                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-            </div>
-        `;
+        if (storyOutput) {
+            storyOutput.innerHTML = `
+                <div class="story-result">
+                    <p>${escapeHtml(story)}</p>
+                    <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+                </div>
+            `;
+        }
     } catch (error) {
-        console.error('Upload error:', error);
-        document.getElementById('story-output').innerHTML = '<p>上传失败: ' + error.message + '</p>';
+        console.error('上传或生成故事失败:', {
+            message: error.message,
+            stack: error.stack
+        });
+        if (storyOutput) {
+            storyOutput.innerHTML = `<p>上传失败: ${error.message}</p>`;
+        }
     }
 }
 
@@ -347,6 +401,7 @@ async function getUserMeta(uid) {
 async function loadPublicSquare() {
     try {
         const square = document.getElementById('public-square');
+        if (!square) return;
         square.innerHTML = '<h2>公开广场</h2>';
 
         const querySnapshot = await db.collection('stories')
@@ -361,7 +416,7 @@ async function loadPublicSquare() {
             const data = doc.data();
             const author = await getUserMeta(data.userId);
             const followersCount = (author.followers || []).length;
-            const iFollow = me ? (author.followers || []).includes(me.uid) : false; // 我是否在作者粉丝里（即我是否已关注作者）
+            const iFollow = me ? (author.followers || []).includes(me.uid) : false;
             const weMutual = await isMutualFollow(me?.uid, author.uid);
 
             const card = document.createElement('div');
@@ -394,7 +449,7 @@ async function loadPublicSquare() {
             square.appendChild(card);
         }
     } catch (error) {
-        console.error('Error loading public square:', error);
+        console.error('加载公开广场失败:', error);
     }
 }
 
@@ -406,7 +461,7 @@ async function likeStory(id) {
         loadPublicSquare();
         loadArchive();
     } catch (error) {
-        console.error('Error liking story:', error);
+        console.error('点赞失败:', error);
     }
 }
 
@@ -414,6 +469,7 @@ async function likeStory(id) {
 async function addComment(id) {
     try {
         const input = document.getElementById(`comment-${id}`);
+        if (!input) return;
         const comment = input.value.trim();
         if (!comment) return;
 
@@ -430,46 +486,7 @@ async function addComment(id) {
         loadPublicSquare();
         loadArchive();
     } catch (error) {
-        console.error('Error adding comment:', error);
-    }
-}
-
-// 加载个人存档
-async function loadArchive() {
-    try {
-        const archive = document.getElementById('archive');
-        archive.innerHTML = '<h2>我的存档</h2>';
-
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const querySnapshot = await db.collection('stories')
-            .where('userId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
-            .get();
-
-        querySnapshot.forEach(doc => {
-            const data = doc.data();
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="user-info">
-                    <img src="${data.userAvatar}" alt="User avatar" class="avatar">
-                    <span>${escapeHtml(data.userName)}</span>
-                </div>
-                <img src="${data.photoUrl}" alt="Story image">
-                <p>${escapeHtml(data.story)}</p>
-                <p>隐私: ${data.privacy}</p>
-                <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
-                <p>点赞: ${data.likes || 0}</p>
-                <div class="comments">
-                    ${(data.comments || []).map(c => `<div class="comment">${escapeHtml(c)}</div>`).join('')}
-                </div>
-            `;
-            archive.appendChild(card);
-        });
-    } catch (error) {
-        console.error('Error loading archive:', error);
+        console.error('添加评论失败:', error);
     }
 }
 
@@ -477,6 +494,7 @@ async function loadArchive() {
 async function loadTags() {
     try {
         const tagSquare = document.getElementById('tag-square');
+        if (!tagSquare) return;
         tagSquare.innerHTML = '<h2>标签广场</h2>';
 
         const tagsMap = {};
@@ -513,17 +531,20 @@ async function loadTags() {
             tagSquare.appendChild(card);
         }
     } catch (error) {
-        console.error('Error loading tags:', error);
+        console.error('加载标签广场失败:', error);
     }
 }
 
 // 搜索故事
 async function searchStories() {
     try {
-        const keyword = document.getElementById('search-keyword').value.toLowerCase().trim();
+        const keywordInput = document.getElementById('search-keyword');
+        if (!keywordInput) return;
+        const keyword = keywordInput.value.toLowerCase().trim();
         if (!keyword) return;
 
         const results = document.getElementById('search-results');
+        if (!results) return;
         results.innerHTML = '';
 
         const allStories = [];
@@ -552,14 +573,17 @@ async function searchStories() {
             results.appendChild(card);
         });
     } catch (error) {
-        console.error('Error searching stories:', error);
+        console.error('搜索故事失败:', error);
     }
 }
 
-/* -------------------- 关注 / 取关 -------------------- */
+// 关注/取关
 async function toggleFollow(targetUserId) {
     const me = auth.currentUser;
-    if (!me) return alert('请先登录');
+    if (!me) {
+        alert('请先登录');
+        return;
+    }
     if (me.uid === targetUserId) return;
 
     const meRef = db.collection("users").doc(me.uid);
@@ -570,7 +594,6 @@ async function toggleFollow(targetUserId) {
     const isFollowing = following.includes(targetUserId);
 
     if (isFollowing) {
-        // 取关
         await meRef.update({
             following: firebase.firestore.FieldValue.arrayRemove(targetUserId)
         });
@@ -578,7 +601,6 @@ async function toggleFollow(targetUserId) {
             followers: firebase.firestore.FieldValue.arrayRemove(me.uid)
         });
     } else {
-        // 关注
         await meRef.update({
             following: firebase.firestore.FieldValue.arrayUnion(targetUserId)
         });
@@ -587,7 +609,7 @@ async function toggleFollow(targetUserId) {
         });
     }
 
-    userMetaCache.delete(targetUserId); // 清缓存
+    userMetaCache.delete(targetUserId);
     await loadPublicSquare();
     await loadMessagesList({ silent: true });
 }
@@ -603,67 +625,76 @@ async function isMutualFollow(uidA, uidB) {
     return aF && bF;
 }
 
-/* -------------------- 私信 -------------------- */
-// 生成会话ID，便于单条件查询
-function convoIdOf(uid1, uid2) {
-    return [uid1, uid2].sort().join('_');
-}
-
-// 打开某人的会话
+// 打开私信
 async function openDM(targetUid) {
     const me = auth.currentUser;
-    if (!me) return alert('请先登录');
+    if (!me) {
+        alert('请先登录');
+        return;
+    }
 
     const mutual = await isMutualFollow(me.uid, targetUid);
     currentChatTarget = await getUserMeta(targetUid);
 
-    // 设置聊天头
-    document.getElementById('chat-target-name').textContent = currentChatTarget.userName || '匿名用户';
-    document.getElementById('chat-target-avatar').src = currentChatTarget.avatarUrl || 'default-avatar.png';
+    const chatTargetName = document.getElementById('chat-target-name');
+    const chatTargetAvatar = document.getElementById('chat-target-avatar');
+    const dmTip = document.getElementById('dm-tip');
+    if (chatTargetName) chatTargetName.textContent = currentChatTarget.userName || '匿名用户';
+    if (chatTargetAvatar) chatTargetAvatar.src = currentChatTarget.avatarUrl || 'default-avatar.png';
+    if (dmTip) dmTip.style.display = mutual ? 'none' : 'block';
 
-    // 提示条
-    const tip = document.getElementById('dm-tip');
-    tip.style.display = mutual ? 'none' : 'block';
-
-    // 清历史 & 监听
     const historyEl = document.getElementById('chat-history');
-    historyEl.innerHTML = '';
+    if (historyEl) historyEl.innerHTML = '';
 
-    if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
+    if (messagesUnsubscribe) {
+        messagesUnsubscribe();
+        messagesUnsubscribe = null;
+    }
 
     const cid = convoIdOf(me.uid, targetUid);
     messagesUnsubscribe = db.collection('messages')
         .where('convoId', '==', cid)
         .orderBy('createdAt', 'asc')
         .onSnapshot(snap => {
-            historyEl.innerHTML = '';
-            snap.forEach(doc => {
-                const m = doc.data();
-                const mine = m.from === me.uid;
-                const bubble = document.createElement('div');
-                bubble.className = `bubble ${mine ? 'mine' : 'theirs'}`;
-                bubble.textContent = m.text;
-                historyEl.appendChild(bubble);
-                historyEl.scrollTop = historyEl.scrollHeight;
-            });
+            if (historyEl) {
+                historyEl.innerHTML = '';
+                snap.forEach(doc => {
+                    const m = doc.data();
+                    const mine = m.from === me.uid;
+                    const bubble = document.createElement('div');
+                    bubble.className = `bubble ${mine ? 'mine' : 'theirs'}`;
+                    bubble.textContent = m.text;
+                    historyEl.appendChild(bubble);
+                    historyEl.scrollTop = historyEl.scrollHeight;
+                });
+            }
         });
 
-    // 切到私信页
     showSection('messages-section');
 }
 
-// 发送消息（仅互关）
+// 发送消息
 async function sendMessage() {
     const me = auth.currentUser;
-    if (!me) return alert('请先登录');
-    if (!currentChatTarget) return alert('请选择会话');
+    if (!me) {
+        alert('请先登录');
+        return;
+    }
+    if (!currentChatTarget) {
+        alert('请选择会话');
+        return;
+    }
 
     const textEl = document.getElementById('chat-input-text');
+    if (!textEl) return;
     const text = textEl.value.trim();
     if (!text) return;
 
     const mutual = await isMutualFollow(me.uid, currentChatTarget.uid);
-    if (!mutual) return alert('只有互相关注后才能私信');
+    if (!mutual) {
+        alert('只有互相关注后才能私信');
+        return;
+    }
 
     const cid = convoIdOf(me.uid, currentChatTarget.uid);
     await db.collection('messages').add({
@@ -677,7 +708,12 @@ async function sendMessage() {
     textEl.value = '';
 }
 
-// 联系人/会话列表：显示“我关注的人”（若互关则可点击进入会话）
+// 会话ID
+function convoIdOf(uid1, uid2) {
+    return [uid1, uid2].sort().join('_');
+}
+
+// 加载联系人列表
 async function loadMessagesList(options = {}) {
     try {
         const listEl = document.getElementById('conversations-list');
@@ -715,11 +751,11 @@ async function loadMessagesList(options = {}) {
 
         if (!options.silent) showSection('messages-section');
     } catch (e) {
-        console.error('loadMessagesList error', e);
+        console.error('加载联系人列表失败:', e);
     }
 }
 
-/* -------------------- 导出必要函数到全局 -------------------- */
+// 导出全局函数
 window.showSection = showSection;
 window.register = register;
 window.login = login;
