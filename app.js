@@ -89,13 +89,15 @@ async function register() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
+    console.log('注册输入:', { email, password });
+
     if (!email || !password) {
-        console.warn('邮箱或密码为空', { email, password });
+        console.warn('邮箱或密码为空');
         showMessage('请输入邮箱和密码', true);
         return;
     }
     if (password.length < 6) {
-        console.warn('密码长度不足', { password });
+        console.warn('密码长度不足');
         showMessage('密码至少需要6位字符', true);
         return;
     }
@@ -160,8 +162,10 @@ async function login() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
+    console.log('登录输入:', { email, password });
+
     if (!email || !password) {
-        console.warn('邮箱或密码为空', { email, password });
+        console.warn('邮箱或密码为空');
         showMessage('请输入邮箱和密码', true);
         return;
     }
@@ -204,6 +208,7 @@ async function login() {
 
 // 登出
 function logout() {
+    console.log('logout 函数触发');
     if (messagesUnsubscribe) {
         messagesUnsubscribe();
         messagesUnsubscribe = null;
@@ -835,6 +840,29 @@ async function loadMessagesList(options = {}) {
         console.error('加载联系人列表失败:', e);
     }
 }
+
+// 在 DOM 加载完成后绑定事件
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM 加载完成，绑定事件');
+    const registerBtn = document.getElementById('register-btn');
+    const loginBtn = document.getElementById('login-btn');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', () => {
+            console.log('注册按钮点击');
+            register();
+        });
+    } else {
+        console.error('未找到 register-btn 元素');
+    }
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            console.log('登录按钮点击');
+            login();
+        });
+    } else {
+        console.error('未找到 login-btn 元素');
+    }
+});
 
 // 导出全局函数
 window.showSection = showSection;
