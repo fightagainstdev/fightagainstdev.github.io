@@ -2,26 +2,28 @@ const functions = require("firebase-functions");
 
 exports.generateStory = functions.https.onCall(async (data, context) => {
   try {
-    console.log("收到请求，data:", data);
-    
-    const photoUrl = data.photoUrl;
+    // Log incoming request data
+    console.log("Received request with data:", data);
+
+    // Validate photoUrl
+    const photoUrl = data?.photoUrl?.trim();
     if (!photoUrl) {
-      console.error("photoUrl 参数缺失");
+      console.error("Missing or invalid photoUrl in request data");
       throw new functions.https.HttpsError("invalid-argument", "photoUrl 必填");
     }
+    console.log("Validated photoUrl:", photoUrl);
 
-    console.log("photoUrl:", photoUrl);
-
+    // Validate API key
     const apiKey = functions.config().xai?.key;
     if (!apiKey) {
-      console.error("XAI API Key 未配置");
+      console.error("XAI API Key is not configured");
       throw new functions.https.HttpsError("failed-precondition", "缺少 XAI API Key");
     }
 
-    console.log("开始调用 X AI API...");
+    console.log("Initiating X AI API call...");
 
-    // X AI API 调用
-    const resp = await fetch("https://api.x.ai/v1/chat/completions", {
+    // Call xAI API
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -44,27 +46,42 @@ exports.generateStory = functions.https.onCall(async (data, context) => {
       }),
     });
 
-    const responseText = await resp.text();
-    console.log("X AI 响应状态:", resp.status);
-    console.log("X AI 响应内容:", responseText);
+    // Log API response status and body
+    const responseText = await response.text();
+    console.log("X AI API response status:", response.status);
+    console.log("X AI API response body:", responseText);
 
-    if (!resp.ok) {
-      console.error("X AI API 调用失败:", resp.status, responseText);
-      throw new functions.https.HttpsError("internal", `X AI API 调用失败: ${resp.status} - ${responseText}`);
+    // Check if API call was successful
+    if (!response.ok) {
+      console.error("X AI API call failed:", response.status, responseText);
+      throw new functions.https.HttpsError("internal", `X AI API 调用失败: ${response.status} - ${responseText}`);
     }
 
-    const result = JSON.parse(responseText);
+    // Parse and validate response
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Failed to parse X AI API response:", parseError);
+      throw new functions.https.HttpsError("internal", "X AI API 响应解析失败");
+    }
+
     const story = result.choices?.[0]?.message?.content || "抱歉，无法生成故事";
-    
-    console.log("提取的故事:", story);
-    
+    console.log("Generated story:", story);
+
+    // Return consistent response structure
     return {
-      story: story,
-      success: true
+      success: true,
+      story: story
     };
 
   } catch (error) {
-    console.error("generateStory 详细错误:", error);
+    // Log detailed error information
+    console.error("generateStory error:", {
+      message: error.message,
+      stack: error.stack,
+      data: data
+    });
     throw new functions.https.HttpsError("internal", `生成故事失败: ${error.message}`);
   }
 });
