@@ -286,23 +286,10 @@ async function updateProfile() {
 
 // 上传照片并生成故事（通过云函数调用 X AI）
 async function uploadAndGenerate() {
-    const fileInput = document.getElementById('photo-upload');
-    if (!fileInput) {
-        console.error('未找到 photo-upload 元素');
-        alert('页面加载错误，请刷新重试');
-        return;
-    }
+    const file = document.getElementById('photo-upload').files[0];
+    if (!file) return alert('请选择一张照片');
 
-    const file = fileInput.files[0];
-    if (!file) {
-        alert('请选择一张照片');
-        return;
-    }
-
-    const storyOutput = document.getElementById('story-output');
-    if (storyOutput) {
-        storyOutput.innerHTML = '<p>正在通过云函数调用 X AI 生成故事...</p>';
-    }
+    document.getElementById('story-output').innerHTML = '<p>正在上传图片...</p>';
 
     try {
         const user = auth.currentUser;
@@ -311,67 +298,130 @@ async function uploadAndGenerate() {
             return;
         }
 
-        // 上传图片
-        const photoRef = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
-        console.log('开始上传图片...');
-        await photoRef.put(file);
-        const photoUrl = await photoRef.getDownloadURL();
-        console.log('图片上传成功，URL:', photoUrl);
+        console.log('用户已登录:', user.uid);
+        console.log('选择的文件:', file.name, file.size, file.type);
 
-        if (!photoUrl) {
-            throw new Error('图片上传失败，未获得有效URL');
+        // 检查文件类型
+        if (!file.type.startsWith('image/')) {
+            throw new Error('请选择有效的图片文件');
         }
 
-        // 调用云函数
-        console.log('调用云函数，参数:', { photoUrl });
-        const callable = functions.httpsCallable('generateStory');
-        const resp = await callable({ photoUrl });
-        console.log('云函数返回:', resp);
+        // 检查文件大小（限制为5MB）
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('文件太大，请选择小于5MB的图片');
+        }
 
-        const d = resp.data || {};
-        let story = d.story || '抱歉，无法生成故事';
+        // 上传图片到Firebase Storage
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name}`;
+        const photoRef = storage.ref(`photos/${user.uid}/${fileName}`);
+        
+        console.log('开始上传到:', photoRef.fullPath);
+        
+        document.getElementById('story-output').innerHTML = '<p>正在上传图片到QURUI AI...</p>';
+        
+        // 使用 uploadTask 来监控上传进度
+        const uploadTask = photoRef.put(file);
+        
+        // 监听上传进度
+        uploadTask.on('state_changed', 
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                document.getElementById('story-output').innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
+                console.log('上传进度:', progress + '%');
+            }, 
+            (error) => {
+                console.error('上传错误:', error);
+                throw error;
+            }
+        );
+
+        // 等待上传完成
+        await uploadTask;
+        console.log('图片上传完成');
+        
+        // 获取下载URL
+        const photoUrl = await photoRef.getDownloadURL();
+        console.log('获取到图片URL:', photoUrl);
+
+        if (!photoUrl) {
+            throw new Error('无法获取图片URL');
+        }
+
+        document.getElementById('story-output').innerHTML = '<p>正在生成故事...</p>';
+
+        // 调用云函数生成故事
+        let story = '';
+        try {
+            console.log('调用云函数，参数:', { photoUrl });
+            const callable = functions.httpsCallable('generateStory');
+            const resp = await callable({ photoUrl: photoUrl });
+            console.log('云函数返回:', resp);
+            
+            const d = resp.data || {};
+            if (d.story) {
+                story = d.story;
+            } else if (d.choices && d.choices[0]?.message?.content) {
+                story = d.choices[0].message.content;
+            } else if (typeof d === 'string') {
+                story = d;
+            } else {
+                story = '生成的故事内容为空';
+            }
+        } catch (err) {
+            console.error('generateStory 调用失败:', err);
+            story = `生成故事时出错: ${err.message || err.toString()}`;
+        }
 
         // 提取标签
         const tags = extractTags(story);
 
-        // 用户资料
+        // 获取用户资料
         const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
+        const userData = userDoc.data() || {};
 
         // 保存到数据库
         await db.collection('stories').add({
             userId: user.uid,
-            userName: userData.userName,
-            userAvatar: userData.avatarUrl,
+            userName: userData.userName || '匿名用户',
+            userAvatar: userData.avatarUrl || 'https://via.placeholder.com/100x100?text=Avatar',
             photoUrl,
             story,
             tags,
-            privacy: document.getElementById('privacy')?.value || 'public',
+            privacy: document.getElementById('privacy').value,
             likes: 0,
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // 刷新页面数据
         loadPublicSquare();
         loadArchive();
         loadTags();
 
-        if (storyOutput) {
-            storyOutput.innerHTML = `
-                <div class="story-result">
-                    <p>${escapeHtml(story)}</p>
-                    <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-                </div>
-            `;
-        }
+        // 显示结果
+        document.getElementById('story-output').innerHTML = `
+            <div class="story-result">
+                <p>${escapeHtml(story)}</p>
+                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+            </div>
+        `;
+
     } catch (error) {
-        console.error('上传或生成故事失败:', {
-            message: error.message,
-            stack: error.stack
-        });
-        if (storyOutput) {
-            storyOutput.innerHTML = `<p>上传失败: ${error.message}</p>`;
+        console.error('详细错误信息:', error);
+        let errorMessage = '上传失败: ';
+        
+        if (error.code === 'storage/unauthorized') {
+            errorMessage += '没有权限上传文件，请检查Firebase Storage规则';
+        } else if (error.code === 'storage/network-request-failed') {
+            errorMessage += '网络连接失败，请检查网络或VPN设置';
+        } else if (error.code === 'storage/quota-exceeded') {
+            errorMessage += 'Storage配额已用完';
+        } else {
+            errorMessage += error.message;
         }
+        
+        document.getElementById('story-output').innerHTML = `<p style="color: red;">${errorMessage}</p>`;
     }
 }
 
@@ -767,3 +817,4 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
