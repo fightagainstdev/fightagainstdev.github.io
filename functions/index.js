@@ -2,19 +2,25 @@ const functions = require("firebase-functions");
 
 exports.generateStory = functions.https.onCall(async (data, context) => {
   try {
+    console.log("收到请求，data:", data);
+    
     const photoUrl = data.photoUrl;
     if (!photoUrl) {
+      console.error("photoUrl 参数缺失");
       throw new functions.https.HttpsError("invalid-argument", "photoUrl 必填");
     }
 
+    console.log("photoUrl:", photoUrl);
+
     const apiKey = functions.config().xai?.key;
     if (!apiKey) {
+      console.error("XAI API Key 未配置");
       throw new functions.https.HttpsError("failed-precondition", "缺少 XAI API Key");
     }
 
-    console.log("调用 X AI API，图片URL:", photoUrl);
+    console.log("开始调用 X AI API...");
 
-    // X AI API call with proper image handling
+    // X AI API 调用
     const resp = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -22,7 +28,7 @@ exports.generateStory = functions.https.onCall(async (data, context) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "grok-vision-beta", // Use vision model
+        model: "grok-beta",
         messages: [
           {
             role: "system",
@@ -30,22 +36,11 @@ exports.generateStory = functions.https.onCall(async (data, context) => {
           },
           {
             role: "user",
-            content: [
-              {
-                type: "text",
-                text: "请根据这张照片创作一个有趣的故事："
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: photoUrl
-                }
-              }
-            ]
+            content: `请根据这张照片创作一个有趣的故事。照片链接：${photoUrl}`
           }
         ],
         max_tokens: 500,
-        temperature: 0.7
+        temperature: 0.8
       }),
     });
 
@@ -59,9 +54,9 @@ exports.generateStory = functions.https.onCall(async (data, context) => {
     }
 
     const result = JSON.parse(responseText);
-    
-    // 提取故事内容
     const story = result.choices?.[0]?.message?.content || "抱歉，无法生成故事";
+    
+    console.log("提取的故事:", story);
     
     return {
       story: story,
@@ -70,12 +65,6 @@ exports.generateStory = functions.https.onCall(async (data, context) => {
 
   } catch (error) {
     console.error("generateStory 详细错误:", error);
-    
-    // 如果是网络错误或API错误，返回友好的错误信息
-    if (error.code === 'invalid-argument' || error.code === 'failed-precondition') {
-      throw error;
-    }
-    
     throw new functions.https.HttpsError("internal", `生成故事失败: ${error.message}`);
   }
 });
