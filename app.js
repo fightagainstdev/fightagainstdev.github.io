@@ -234,11 +234,17 @@ async function uploadAndGenerate() {
             } else {
                 story = '（后端未返回内容）';
             }
+        document.getElementById('story-output').innerHTML = `
+    		<div class="story-result">
+      			<p>${story}</p>
+      			<img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+    		</div>
+ 	 `;
         } catch (err) {
-            console.error('AI API error via function:', err);
-            story = "生成故事时出错，请稍后再试。这是一张美好的照片，值得记录。";
-        }
-
+  		console.error('generateStory 调用失败:', err);
+ 		document.getElementById('story-output').innerHTML =
+    			`<p>生成故事时出错: ${err.message || err.toString()}</p>`;
+	}
         // 提取标签
         const tags = extractTags(story);
 
