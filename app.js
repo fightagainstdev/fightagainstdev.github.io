@@ -1,5 +1,6 @@
+// Firebase 配置（请确认是否与你的 Firebase 项目匹配）
 const firebaseConfig = {
-    apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSllG0Pg",
+    apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSatoon        // 请替换为你的实际 API Key
     authDomain: "photo-story-app.firebaseapp.com",
     projectId: "photo-story-app",
     storageBucket: "photo-story-app.firebasestorage.app",
@@ -7,6 +8,7 @@ const firebaseConfig = {
     appId: "1:571174185577:web:35e312c16feb1efb6b10f8"
 };
 
+// 初始化 Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -33,7 +35,7 @@ function showMessage(message, isError = false) {
     setTimeout(() => { messageDiv.style.display = 'none'; }, 5000);
 }
 
-// 禁用/启用按钮
+// 禁用/启用心配    // 启用/禁用按钮
 function setButtonsDisabled(disabled) {
     const r = document.getElementById('register-btn');
     const l = document.getElementById('login-btn');
@@ -129,7 +131,7 @@ async function register() {
                 errorMessage = '请求过于频繁，请稍后再试';
                 break;
             default:
-                errorMessage = `注册失败: ${error.message}`;
+                errorMessage = `基本的注册失败: ${error.message}`;
         }
         showMessage(errorMessage, true);
     } finally {
@@ -284,12 +286,24 @@ async function updateProfile() {
     }
 }
 
-// 上传照片并生成故事（通过云函数调用 X AI）
+// 上传照片并生成故事
 async function uploadAndGenerate() {
-    const file = document.getElementById('photo-upload').files[0];
-    if (!file) return alert('请选择一张照片');
+    const fileInput = document.getElementById('photo-upload');
+    const storyOutput = document.getElementById('story-output');
+    
+    if (!fileInput || !storyOutput) {
+        console.error('未找到 photo-upload 或 story-output 元素');
+        alert('页面加载错误，请刷新重试');
+        return;
+    }
 
-    document.getElementById('story-output').innerHTML = '<p>正在上传图片...</p>';
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('请选择一张照片');
+        return;
+    }
+
+    storyOutput.innerHTML = '<p>正在上传图片并生成故事...</p>';
 
     try {
         const user = auth.currentUser;
@@ -298,97 +312,50 @@ async function uploadAndGenerate() {
             return;
         }
 
-        console.log('用户已登录:', user.uid);
-        console.log('选择的文件:', file.name, file.size, file.type);
+        // 上传图片
+        console.log('开始上传图片:', file.name);
+        const photoRef = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
+        const uploadTask = await photoRef.put(file);
+        const photoUrl = await uploadTask.ref.getDownloadURL();
+        console.log('图片上传成功，URL:', photoUrl);
 
-        // 检查文件类型
-        if (!file.type.startsWith('image/')) {
-            throw new Error('请选择有效的图片文件');
+        // 验证 photoUrl
+        if (!photoUrl || typeof photoUrl !== 'string' || !photoUrl.startsWith('https://')) {
+            throw new Error('无效的图片 URL');
         }
 
-        // 检查文件大小（限制为5MB）
-        if (file.size > 5 * 1024 * 1024) {
-            throw new Error('文件太大，请选择小于5MB的图片');
+        // 调用云函数
+        console.log('调用云函数 generateStory，参数:', { photoUrl });
+        const callable = functions.httpsCallable('generateStory');
+        const resp = await callable({ photoUrl });
+        console.log('云函数返回:', resp);
+
+        // 处理云函数响应
+        const d = resp.data || {};
+        if (!d.success || !d.story) {
+            throw new Error(d.error || '云函数未返回有效故事');
         }
-
-        // 上传图片到Firebase Storage
-        const timestamp = Date.now();
-        const fileName = `${timestamp}_${file.name}`;
-        const photoRef = storage.ref(`photos/${user.uid}/${fileName}`);
-        
-        console.log('开始上传到:', photoRef.fullPath);
-        
-        document.getElementById('story-output').innerHTML = '<p>正在上传图片到QURUI AI...</p>';
-        
-        // 使用 uploadTask 来监控上传进度
-        const uploadTask = photoRef.put(file);
-        
-        // 监听上传进度
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                document.getElementById('story-output').innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
-                console.log('上传进度:', progress + '%');
-            }, 
-            (error) => {
-                console.error('上传错误:', error);
-                throw error;
-            }
-        );
-
-        // 等待上传完成
-        await uploadTask;
-        console.log('图片上传完成');
-        
-        // 获取下载URL
-        const photoUrl = await photoRef.getDownloadURL();
-        console.log('获取到图片URL:', photoUrl);
-
-        if (!photoUrl) {
-            throw new Error('无法获取图片URL');
-        }
-
-        document.getElementById('story-output').innerHTML = '<p>正在生成故事...</p>';
-
-        // 调用云函数生成故事
-        let story = '';
-        try {
-            console.log('调用云函数，参数:', { photoUrl });
-            const callable = functions.httpsCallable('generateStory');
-            const resp = await callable({ photoUrl: photoUrl });
-            console.log('云函数返回:', resp);
-            
-            const d = resp.data || {};
-            if (d.story) {
-                story = d.story;
-            } else if (d.choices && d.choices[0]?.message?.content) {
-                story = d.choices[0].message.content;
-            } else if (typeof d === 'string') {
-                story = d;
-            } else {
-                story = '生成的故事内容为空';
-            }
-        } catch (err) {
-            console.error('generateStory 调用失败:', err);
-            story = `生成故事时出错: ${err.message || err.toString()}`;
-        }
+        const story = d.story;
 
         // 提取标签
         const tags = extractTags(story);
 
         // 获取用户资料
         const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data() || {};
+        if (!userDoc.exists) {
+            throw new Error('用户资料不存在');
+        }
+        const userData = userDoc.data();
 
         // 保存到数据库
         await db.collection('stories').add({
             userId: user.uid,
-            userName: userData.userName || '匿名用户',
-            userAvatar: userData.avatarUrl || 'https://via.placeholder.com/100x100?text=Avatar',
+            userName: userData.userName,
+            userAvatar: userData.avatarUrl,
             photoUrl,
             story,
             tags,
-            privacy: document.getElementById('privacy').value,
+            privacy: document.getElementById('privacy')?.value || 'public',
             likes: 0,
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -400,40 +367,89 @@ async function uploadAndGenerate() {
         loadTags();
 
         // 显示结果
-        document.getElementById('story-output').innerHTML = `
+        storyOutput.innerHTML = `
             <div class="story-result">
                 <p>${escapeHtml(story)}</p>
-                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+                <img src="${photoUrl}" alt="已上传的照片" style="max-width: 100%; margin-top: 10px;">
             </div>
         `;
-
     } catch (error) {
-        console.error('详细错误信息:', error);
-        let errorMessage = '上传失败: ';
-        
-        if (error.code === 'storage/unauthorized') {
-            errorMessage += '没有权限上传文件，请检查Firebase Storage规则';
-        } else if (error.code === 'storage/network-request-failed') {
-            errorMessage += '网络连接失败，请检查网络或VPN设置';
-        } else if (error.code === 'storage/quota-exceeded') {
-            errorMessage += 'Storage配额已用完';
-        } else {
-            errorMessage += error.message;
+        console.error('上传或生成故事失败:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
+        storyOutput.innerHTML = `<p>上传失败: ${error.message}</p>`;
+    }
+}
+
+// 加载我的存档
+async function loadArchive() {
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            console.log('未登录用户，无法加载存档');
+            return;
         }
-        
-        document.getElementById('story-output').innerHTML = `<p style="color: red;">${errorMessage}</p>`;
+        const archive = document.getElementById('archive');
+        if (!archive) {
+            console.error('未找到 archive 元素');
+            return;
+        }
+        archive.innerHTML = '<h2>我的存档</h2>';
+
+        const querySnapshot = await db.collection('stories')
+            .where('userId', '==', user.uid)
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+
+        if (querySnapshot.empty) {
+            archive.innerHTML += '<p>暂无存档</p>';
+            return;
+        }
+
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="user-info">
+                    <img src="${data.userAvatar}" alt="User avatar" class="avatar">
+                    <span>${escapeHtml(data.userName)}</span>
+                </div>
+                <img src="${data.photoUrl}" alt="Story image">
+                <p>${escapeHtml(data.story)}</p>
+                <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
+                <p>点赞: ${data.likes || 0}</p>
+                <div class="cmt-row">
+                    <input id="comment-${doc.id}" placeholder="添加评论...">
+                    <button onclick="addComment('${doc.id}')">评论</button>
+                </div>
+                <div class="comments">
+                    ${(data.comments || []).map(c => `<div class="comment">${escapeHtml(c)}</div>`).join('')}
+                </div>
+            `;
+            archive.appendChild(card);
+        });
+    } catch (error) {
+        console.error('加载存档失败:', error);
+        const archive = document.getElementById('archive');
+        if (archive) {
+            archive.innerHTML = `<p>加载存档失败: ${error.message}</p>`;
+        }
     }
 }
 
 // 提取标签
 function extractTags(text) {
     const words = text.split(/[\s，。！？、,.!?:;（）()“”"'\-]+/);
-    return words.filter(w => w.length > 2 && !['一个','的','了','在','是','有','这','那','我们','你们','他们','因为','所以'].includes(w)).slice(0, 5);
+    return words.filter(w => w.length > 2 && !['一个', '的', '了', '在', '是', '有', '这', '那', '我们', '你们', '他们', '因为', '所以'].includes(w)).slice(0, 5);
 }
 
 // HTML 转义
 function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    return s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
 // 获取并缓存用户信息
@@ -449,7 +465,10 @@ async function getUserMeta(uid) {
 async function loadPublicSquare() {
     try {
         const square = document.getElementById('public-square');
-        if (!square) return;
+        if (!square) {
+            console.error('未找到 public-square 元素');
+            return;
+        }
         square.innerHTML = '<h2>公开广场</h2>';
 
         const querySnapshot = await db.collection('stories')
@@ -478,7 +497,6 @@ async function loadPublicSquare() {
                 <p>${escapeHtml(data.story)}</p>
                 <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
                 <p>点赞: ${data.likes || 0}</p>
-                <p>粉丝数: ${followersCount}</p>
                 <div class="button-group">
                     <button onclick="likeStory('${doc.id}')">点赞</button>
                     ${me && me.uid !== author.uid ? `
@@ -542,7 +560,10 @@ async function addComment(id) {
 async function loadTags() {
     try {
         const tagSquare = document.getElementById('tag-square');
-        if (!tagSquare) return;
+        if (!tagSquare) {
+            console.error('未找到 tag-square 元素');
+            return;
+        }
         tagSquare.innerHTML = '<h2>标签广场</h2>';
 
         const tagsMap = {};
@@ -603,7 +624,7 @@ async function searchStories() {
             const matchCount = (data.story.toLowerCase().match(new RegExp(keyword, 'g')) || []).length;
             if (matchCount > 0) {
                 allStories.push({ ...data, id: doc.id, matchCount });
-            }
+            });
         });
 
         allStories.sort((a, b) => b.matchCount - a.matchCount).slice(0, 5).forEach(story => {
@@ -817,4 +838,3 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
-
