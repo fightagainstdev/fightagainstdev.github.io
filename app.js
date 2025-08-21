@@ -220,32 +220,34 @@ async function uploadAndGenerate() {
 
         // 调用云函数（后端保密 XAI_API_KEY）
         let story = '';
-        try {
-            const callable = functions.httpsCallable('generateStory');
-            const resp = await callable({ photoUrl });
-            // 兼容后端返回结构：直接 data，或 data.choices[0].message.content
-            const d = resp.data || {};
-            if (d.choices && d.choices[0]?.message?.content) {
-                story = d.choices[0].message.content;
-            } else if (typeof d === 'string') {
-                story = d;
-            } else if (d.story) {
-                story = d.story;
-            } else {
-                story = '（后端未返回内容）';
-            }
-        document.getElementById('story-output').innerHTML = `
-    		<div class="story-result">
-      			<p>${story}</p>
-      			<img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-    		</div>
- 	 `;
-        } catch (err) {
-  		console.error('generateStory 调用失败:', err);
- 		document.getElementById('story-output').innerHTML =
-    			`<p>生成故事时出错: ${err.message || err.toString()}</p>`;
-	}
-        // 提取标签
+        // In the uploadAndGenerate function, replace the API call section:
+try {
+    const callable = functions.httpsCallable('generateStory');
+    const resp = await callable({ photoUrl });
+    
+    console.log("Cloud Function 返回:", resp);
+    
+    let story = '';
+    if (resp.data && resp.data.story) {
+        story = resp.data.story;
+    } else if (resp.data && typeof resp.data === 'string') {
+        story = resp.data;
+    } else {
+        story = '生成故事时出现问题，请稍后重试。';
+    }
+    
+    document.getElementById('story-output').innerHTML = `
+        <div class="story-result">
+            <p>${escapeHtml(story)}</p>
+            <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+        </div>
+    `;
+} catch (err) {
+    console.error('generateStory 调用失败:', err);
+    document.getElementById('story-output').innerHTML = `
+        <p>生成故事时出错: ${err.message || err.toString()}</p>
+    `;
+}        // 提取标签
         const tags = extractTags(story);
 
         // 用户资料
