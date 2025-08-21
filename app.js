@@ -1,6 +1,6 @@
-// Firebase 配置（请确认是否与你的 Firebase 项目匹配）
+// Firebase 配置（请确认与你的 Firebase 项目匹配）
 const firebaseConfig = {
-    apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSatoon        // 请替换为你的实际 API Key
+    apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSllG0Pg",
     authDomain: "photo-story-app.firebaseapp.com",
     projectId: "photo-story-app",
     storageBucket: "photo-story-app.firebasestorage.app",
@@ -27,6 +27,7 @@ function showMessage(message, isError = false) {
     const messageDiv = document.getElementById('auth-message');
     if (!messageDiv) {
         console.error('未找到 auth-message 元素');
+        alert(message); // 备用提示方式
         return;
     }
     messageDiv.textContent = message;
@@ -35,12 +36,13 @@ function showMessage(message, isError = false) {
     setTimeout(() => { messageDiv.style.display = 'none'; }, 5000);
 }
 
-// 禁用/启用心配    // 启用/禁用按钮
+// 禁用/启用按钮
 function setButtonsDisabled(disabled) {
     const r = document.getElementById('register-btn');
     const l = document.getElementById('login-btn');
     if (r) r.disabled = disabled;
     if (l) l.disabled = disabled;
+    else console.warn('未找到 register-btn 或 login-btn 元素');
 }
 
 // 切换页面
@@ -49,6 +51,7 @@ function showSection(sectionId) {
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = id === sectionId ? 'block' : 'none';
+        else console.warn(`未找到 ${id} 元素`);
     });
 }
 
@@ -56,7 +59,7 @@ function showSection(sectionId) {
 auth.onAuthStateChanged(user => {
     console.log('Auth state changed:', user ? `User logged in: ${user.uid}` : 'User logged out');
     if (user) {
-        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('auth-section')?.style.display = 'none';
         showSection('main-section');
         loadPublicSquare();
         loadArchive();
@@ -64,7 +67,7 @@ auth.onAuthStateChanged(user => {
         loadProfile();
         loadMessagesList({ silent: true });
     } else {
-        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('auth-section')?.style.display = 'block';
         sections.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -74,6 +77,7 @@ auth.onAuthStateChanged(user => {
 
 // 注册
 async function register() {
+    console.log('register 函数触发');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     if (!emailInput || !passwordInput) {
@@ -86,10 +90,12 @@ async function register() {
     const password = passwordInput.value;
 
     if (!email || !password) {
+        console.warn('邮箱或密码为空', { email, password });
         showMessage('请输入邮箱和密码', true);
         return;
     }
     if (password.length < 6) {
+        console.warn('密码长度不足', { password });
         showMessage('密码至少需要6位字符', true);
         return;
     }
@@ -100,6 +106,7 @@ async function register() {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
+        console.log('注册成功，用户:', user.uid);
 
         await db.collection('users').doc(user.uid).set({
             userName: email.split('@')[0],
@@ -131,7 +138,7 @@ async function register() {
                 errorMessage = '请求过于频繁，请稍后再试';
                 break;
             default:
-                errorMessage = `基本的注册失败: ${error.message}`;
+                errorMessage = `注册失败: ${error.message}`;
         }
         showMessage(errorMessage, true);
     } finally {
@@ -141,6 +148,7 @@ async function register() {
 
 // 登录
 async function login() {
+    console.log('login 函数触发');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     if (!emailInput || !passwordInput) {
@@ -153,6 +161,7 @@ async function login() {
     const password = passwordInput.value;
 
     if (!email || !password) {
+        console.warn('邮箱或密码为空', { email, password });
         showMessage('请输入邮箱和密码', true);
         return;
     }
@@ -162,6 +171,7 @@ async function login() {
 
     try {
         await auth.signInWithEmailAndPassword(email, password);
+        console.log('登录成功');
         showMessage('登录成功！');
     } catch (error) {
         console.error('登录失败:', {
@@ -203,6 +213,7 @@ function logout() {
 
 // 重置密码
 function resetPassword() {
+    console.log('resetPassword 函数触发');
     const emailInput = document.getElementById('email');
     if (!emailInput) {
         console.error('未找到 email 输入框');
@@ -212,6 +223,7 @@ function resetPassword() {
 
     const email = emailInput.value.trim();
     if (!email) {
+        console.warn('邮箱为空');
         showMessage('请先输入邮箱', true);
         return;
     }
