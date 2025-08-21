@@ -203,6 +203,8 @@ async function updateProfile() {
 }
 
 // 上传照片并生成故事（通过云函数调用 X AI）
+        const tags = extractTags(story);
+// 上传照片并生成故事（通过云函数调用 X AI）
 async function uploadAndGenerate() {
     const file = document.getElementById('photo-upload').files[0];
     if (!file) return alert('请选择一张照片');
@@ -215,41 +217,78 @@ async function uploadAndGenerate() {
 
         // 上传图片
         const photoRef = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
+        console.log('开始上传图片...');
         await photoRef.put(file);
         const photoUrl = await photoRef.getDownloadURL();
+        console.log('图片上传成功，URL:', photoUrl);
+
+        // 确保 photoUrl 存在
+        if (!photoUrl) {
+            throw new Error('图片上传失败，未获得有效URL');
+        }
 
         // 调用云函数（后端保密 XAI_API_KEY）
         let story = '';
-        // In the uploadAndGenerate function, replace the API call section:
-try {
-    const callable = functions.httpsCallable('generateStory');
-    const resp = await callable({ photoUrl });
-    
-    console.log("Cloud Function 返回:", resp);
-    
-    let story = '';
-    if (resp.data && resp.data.story) {
-        story = resp.data.story;
-    } else if (resp.data && typeof resp.data === 'string') {
-        story = resp.data;
-    } else {
-        story = '生成故事时出现问题，请稍后重试。';
-    }
-    
-    document.getElementById('story-output').innerHTML = `
-        <div class="story-result">
-            <p>${escapeHtml(story)}</p>
-            <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-        </div>
-    `;
-} catch (err) {
-    console.error('generateStory 调用失败:', err);
-    document.getElementById('story-output').innerHTML = `
-        <p>生成故事时出错: ${err.message || err.toString()}</p>
-    `;
-}        // 提取标签
+        try {
+            console.log('调用云函数，参数:', { photoUrl });
+            const callable = functions.httpsCallable('generateStory');
+            const resp = await callable({ photoUrl: photoUrl }); // 明确传递参数
+            console.log('云函数返回:', resp);
+            
+            // 兼容后端返回结构：直接 data，或 data.choices[0].message.content
+            const d = resp.data || {};
+            if (d.story) {
+                story = d.story;
+            } else if (d.choices && d.choices[0]?.message?.content) {
+                story = d.choices[0].message.content;
+            } else if (typeof d === 'string') {
+                story = d;
+            } else {
+                story = '（后端未返回内容）';
+            }
+        } catch (err) {
+            console.error('generateStory 调用失败:', err);
+            story = `生成故事时出错: ${err.message || err.toString()}`;
+        }
+
+        // 提取标签
         const tags = extractTags(story);
 
+        // 用户资料
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+
+        // 保存到数据库
+        await db.collection('stories').add({
+            userId: user.uid,
+            userName: userData.userName,
+            userAvatar: userData.avatarUrl,
+            photoUrl,
+            story,
+            tags,
+            privacy: document.getElementById('privacy').value,
+            likes: 0,
+            comments: [],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 刷新页面数据
+        loadPublicSquare();
+        loadArchive();
+        loadTags();
+
+        // 显示结果
+        document.getElementById('story-output').innerHTML = `
+            <div class="story-result">
+                <p>${escapeHtml(story)}</p>
+                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+            </div>
+        `;
+    } catch (error) {
+        console.error('Upload error:', error);
+        document.getElementById('story-output').innerHTML = '<p>上传失败: ' + error.message + '</p>';
+    }
+}
         // 用户资料
         const userDoc = await db.collection('users').doc(user.uid).get();
         const userData = userDoc.data();
