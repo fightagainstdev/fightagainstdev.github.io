@@ -403,58 +403,48 @@ async function uploadAndGenerate() {
 // 加载我的存档
 async function loadArchive() {
     try {
+        const archive = document.getElementById('archive');
+        if (!archive) return;
+        archive.innerHTML = '<h2>我的存档</h2>';
+
         const user = auth.currentUser;
         if (!user) {
-            console.log('未登录用户，无法加载存档');
+            archive.innerHTML += '<p>请先登录</p>';
             return;
         }
-        const archive = document.getElementById('archive');
-        if (!archive) {
-            console.error('未找到 archive 元素');
-            return;
-        }
-        archive.innerHTML = '<h2>我的存档</h2>';
 
         const querySnapshot = await db.collection('stories')
             .where('userId', '==', user.uid)
             .orderBy('createdAt', 'desc')
-            .limit(20)
             .get();
 
         if (querySnapshot.empty) {
-            archive.innerHTML += '<p>暂无存档</p>';
+            archive.innerHTML += '<p>暂无存档。</p>';
             return;
         }
 
-        querySnapshot.forEach(doc => {
+        for (const doc of querySnapshot.docs) {
             const data = doc.data();
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
                 <div class="user-info">
                     <img src="${data.userAvatar}" alt="User avatar" class="avatar">
-                    <span>${escapeHtml(data.userName)}</span>
+                    <span>${escapeHtml(data.userName || '匿名用户')}</span>
                 </div>
                 <img src="${data.photoUrl}" alt="Story image">
                 <p>${escapeHtml(data.story)}</p>
                 <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
+                <p>隐私: ${data.privacy}</p>
                 <p>点赞: ${data.likes || 0}</p>
-                <div class="cmt-row">
-                    <input id="comment-${doc.id}" placeholder="添加评论...">
-                    <button onclick="addComment('${doc.id}')">评论</button>
-                </div>
                 <div class="comments">
                     ${(data.comments || []).map(c => `<div class="comment">${escapeHtml(c)}</div>`).join('')}
                 </div>
             `;
             archive.appendChild(card);
-        });
+        }
     } catch (error) {
         console.error('加载存档失败:', error);
-        const archive = document.getElementById('archive');
-        if (archive) {
-            archive.innerHTML = `<p>加载存档失败: ${error.message}</p>`;
-        }
     }
 }
 
@@ -878,3 +868,4 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
