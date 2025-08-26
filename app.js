@@ -1,4 +1,3 @@
-// Firebase 配置（请确认与你的 Firebase 项目匹配）
 const firebaseConfig = {
     apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSllG0Pg",
     authDomain: "photo-story-app.firebaseapp.com",
@@ -8,7 +7,6 @@ const firebaseConfig = {
     appId: "1:571174185577:web:35e312c16feb1efb6b10f8"
 };
 
-// 初始化 Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -22,12 +20,25 @@ let messagesUnsubscribe = null; // 监听解除
 // 简单缓存
 const userMetaCache = new Map();
 
+// 辅助函数：转义 HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 辅助函数：提取标签
+function extractTags(story) {
+    const words = story.split(/\s+/);
+    const tags = words.filter(word => word.startsWith('#')).map(tag => tag.replace(/^#/, ''));
+    return [...new Set(tags)];
+}
+
 // 辅助函数：消息提示
 function showMessage(message, isError = false) {
     const messageDiv = document.getElementById('auth-message');
     if (!messageDiv) {
         console.error('未找到 auth-message 元素');
-        alert(message); // 备用提示方式
         return;
     }
     messageDiv.textContent = message;
@@ -42,7 +53,6 @@ function setButtonsDisabled(disabled) {
     const l = document.getElementById('login-btn');
     if (r) r.disabled = disabled;
     if (l) l.disabled = disabled;
-    else console.warn('未找到 register-btn 或 login-btn 元素');
 }
 
 // 切换页面
@@ -51,15 +61,23 @@ function showSection(sectionId) {
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = id === sectionId ? 'block' : 'none';
-        else console.warn(`未找到 ${id} 元素`);
     });
+}
+
+// 获取用户元数据
+async function getUserMeta(uid) {
+    if (userMetaCache.has(uid)) return userMetaCache.get(uid);
+    const doc = await db.collection('users').doc(uid).get();
+    const data = doc.exists ? doc.data() : { userName: '匿名用户', avatarUrl: 'https://via.placeholder.com/100x100?text=Avatar', followers: [] };
+    userMetaCache.set(uid, data);
+    return data;
 }
 
 // 监听登录状态
 auth.onAuthStateChanged(user => {
     console.log('Auth state changed:', user ? `User logged in: ${user.uid}` : 'User logged out');
     if (user) {
-        document.getElementById('auth-section')?.style.display = 'none';
+        document.getElementById('auth-section').style.display = 'none';
         showSection('main-section');
         loadPublicSquare();
         loadArchive();
@@ -67,7 +85,7 @@ auth.onAuthStateChanged(user => {
         loadProfile();
         loadMessagesList({ silent: true });
     } else {
-        document.getElementById('auth-section')?.style.display = 'block';
+        document.getElementById('auth-section').style.display = 'block';
         sections.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -77,7 +95,6 @@ auth.onAuthStateChanged(user => {
 
 // 注册
 async function register() {
-    console.log('register 函数触发');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     if (!emailInput || !passwordInput) {
@@ -89,15 +106,11 @@ async function register() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
-    console.log('注册输入:', { email, password });
-
     if (!email || !password) {
-        console.warn('邮箱或密码为空');
         showMessage('请输入邮箱和密码', true);
         return;
     }
     if (password.length < 6) {
-        console.warn('密码长度不足');
         showMessage('密码至少需要6位字符', true);
         return;
     }
@@ -108,7 +121,6 @@ async function register() {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
-        console.log('注册成功，用户:', user.uid);
 
         await db.collection('users').doc(user.uid).set({
             userName: email.split('@')[0],
@@ -150,7 +162,6 @@ async function register() {
 
 // 登录
 async function login() {
-    console.log('login 函数触发');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     if (!emailInput || !passwordInput) {
@@ -162,10 +173,7 @@ async function login() {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
-    console.log('登录输入:', { email, password });
-
     if (!email || !password) {
-        console.warn('邮箱或密码为空');
         showMessage('请输入邮箱和密码', true);
         return;
     }
@@ -175,7 +183,6 @@ async function login() {
 
     try {
         await auth.signInWithEmailAndPassword(email, password);
-        console.log('登录成功');
         showMessage('登录成功！');
     } catch (error) {
         console.error('登录失败:', {
@@ -208,7 +215,6 @@ async function login() {
 
 // 登出
 function logout() {
-    console.log('logout 函数触发');
     if (messagesUnsubscribe) {
         messagesUnsubscribe();
         messagesUnsubscribe = null;
@@ -218,7 +224,6 @@ function logout() {
 
 // 重置密码
 function resetPassword() {
-    console.log('resetPassword 函数触发');
     const emailInput = document.getElementById('email');
     if (!emailInput) {
         console.error('未找到 email 输入框');
@@ -228,7 +233,6 @@ function resetPassword() {
 
     const email = emailInput.value.trim();
     if (!email) {
-        console.warn('邮箱为空');
         showMessage('请先输入邮箱', true);
         return;
     }
@@ -305,22 +309,10 @@ async function updateProfile() {
 
 // 上传照片并生成故事
 async function uploadAndGenerate() {
-    const fileInput = document.getElementById('photo-upload');
-    const storyOutput = document.getElementById('story-output');
-    
-    if (!fileInput || !storyOutput) {
-        console.error('未找到 photo-upload 或 story-output 元素');
-        alert('页面加载错误，请刷新重试');
-        return;
-    }
+    const file = document.getElementById('photo-upload').files[0];
+    if (!file) return alert('请选择一张照片');
 
-    const file = fileInput.files[0];
-    if (!file) {
-        alert('请选择一张照片');
-        return;
-    }
-
-    storyOutput.innerHTML = '<p>正在上传图片并生成故事...</p>';
+    document.getElementById('story-output').innerHTML = '<p>正在上传图片...</p>';
 
     try {
         const user = auth.currentUser;
@@ -329,153 +321,113 @@ async function uploadAndGenerate() {
             return;
         }
 
-        // 上传图片
-        console.log('开始上传图片:', file.name);
-        const photoRef = storage.ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
-        const uploadTask = await photoRef.put(file);
-        const photoUrl = await uploadTask.ref.getDownloadURL();
-        console.log('图片上传成功，URL:', photoUrl);
+        console.log('用户已登录:', user.uid);
+        console.log('选择的文件:', file.name, file.size, file.type);
 
-        // 验证 photoUrl
-        if (!photoUrl || typeof photoUrl !== 'string' || !photoUrl.startsWith('https://')) {
-            throw new Error('无效的图片 URL');
+        if (!file.type.startsWith('image/')) {
+            throw new Error('请选择有效的图片文件');
         }
 
-        // 调用云函数
-        console.log('调用云函数 generateStory，参数:', { photoUrl });
-        const callable = functions.httpsCallable('generateStory');
-        const resp = await callable({ photoUrl });
-        console.log('云函数返回:', resp);
-
-        // 处理云函数响应
-        const d = resp.data || {};
-        if (!d.success || !d.story) {
-            throw new Error(d.error || '云函数未返回有效故事');
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('文件太大，请选择小于5MB的图片');
         }
-        const story = d.story;
 
-        // 提取标签
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name}`;
+        const photoRef = storage.ref(`photos/${user.uid}/${fileName}`);
+        
+        console.log('开始上传到:', photoRef.fullPath);
+        
+        document.getElementById('story-output').innerHTML = '<p>正在上传图片到QURUI AI...</p>';
+        
+        const uploadTask = photoRef.put(file);
+        
+        uploadTask.on('state_changed', 
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                document.getElementById('story-output').innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
+                console.log('上传进度:', progress + '%');
+            }, 
+            (error) => {
+                console.error('上传错误:', error);
+                throw error;
+            }
+        );
+
+        await uploadTask;
+        console.log('图片上传完成');
+        
+        const photoUrl = await photoRef.getDownloadURL();
+        console.log('获取到图片URL:', photoUrl);
+
+        if (!photoUrl) {
+            throw new Error('无法获取图片URL');
+        }
+
+        document.getElementById('story-output').innerHTML = '<p>正在生成故事...</p>';
+
+        let story = '';
+        try {
+            console.log('调用云函数，参数:', { photoUrl });
+            const callable = functions.httpsCallable('generateStory');
+            const resp = await callable({ photoUrl: photoUrl });
+            console.log('云函数返回:', resp);
+            
+            const d = resp.data || {};
+            if (d.story) {
+                story = d.story;
+            } else if (d.choices && d.choices[0]?.message?.content) {
+                story = d.choices[0].message.content;
+            } else if (typeof d === 'string') {
+                story = d;
+            } else {
+                story = '生成的故事内容为空';
+            }
+        } catch (err) {
+            console.error('generateStory 调用失败:', err);
+            story = `生成故事时出错: ${err.message || err.toString()}`;
+        }
+
         const tags = extractTags(story);
 
-        // 获取用户资料
         const userDoc = await db.collection('users').doc(user.uid).get();
-        if (!userDoc.exists) {
-            throw new Error('用户资料不存在');
-        }
-        const userData = userDoc.data();
+        const userData = userDoc.data() || {};
 
-        // 保存到数据库
         await db.collection('stories').add({
             userId: user.uid,
-            userName: userData.userName,
-            userAvatar: userData.avatarUrl,
+            userName: userData.userName || '匿名用户',
+            userAvatar: userData.avatarUrl || 'https://via.placeholder.com/100x100?text=Avatar',
             photoUrl,
             story,
             tags,
-            privacy: document.getElementById('privacy')?.value || 'public',
+            privacy: document.getElementById('privacy').value,
             likes: 0,
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 刷新页面数据
         loadPublicSquare();
         loadArchive();
         loadTags();
 
-        // 显示结果
-        storyOutput.innerHTML = `
+        document.getElementById('story-output').innerHTML = `
             <div class="story-result">
                 <p>${escapeHtml(story)}</p>
-                <img src="${photoUrl}" alt="已上传的照片" style="max-width: 100%; margin-top: 10px;">
+                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
             </div>
         `;
+
     } catch (error) {
-        console.error('上传或生成故事失败:', {
-            message: error.message,
-            stack: error.stack,
-            code: error.code
-        });
-        storyOutput.innerHTML = `<p>上传失败: ${error.message}</p>`;
+        console.error('详细错误信息:', error);
+        document.getElementById('story-output').innerHTML = `<p style="color: #ff9999;">错误: ${error.message}</p>`;
     }
-}
-
-// 加载我的存档
-async function loadArchive() {
-    try {
-        const archive = document.getElementById('archive');
-        if (!archive) return;
-        archive.innerHTML = '<h2>我的存档</h2>';
-
-        const user = auth.currentUser;
-        if (!user) {
-            archive.innerHTML += '<p>请先登录</p>';
-            return;
-        }
-
-        const querySnapshot = await db.collection('stories')
-            .where('userId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
-            .get();
-
-        if (querySnapshot.empty) {
-            archive.innerHTML += '<p>暂无存档。</p>';
-            return;
-        }
-
-        for (const doc of querySnapshot.docs) {
-            const data = doc.data();
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="user-info">
-                    <img src="${data.userAvatar}" alt="User avatar" class="avatar">
-                    <span>${escapeHtml(data.userName || '匿名用户')}</span>
-                </div>
-                <img src="${data.photoUrl}" alt="Story image">
-                <p>${escapeHtml(data.story)}</p>
-                <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
-                <p>隐私: ${data.privacy}</p>
-                <p>点赞: ${data.likes || 0}</p>
-                <div class="comments">
-                    ${(data.comments || []).map(c => `<div class="comment">${escapeHtml(c)}</div>`).join('')}
-                </div>
-            `;
-            archive.appendChild(card);
-        }
-    } catch (error) {
-        console.error('加载存档失败:', error);
-    }
-}
-
-// 提取标签
-function extractTags(text) {
-    const words = text.split(/[\s，。！？、,.!?:;（）()“”"'\-]+/);
-    return words.filter(w => w.length > 2 && !['一个', '的', '了', '在', '是', '有', '这', '那', '我们', '你们', '他们', '因为', '所以'].includes(w)).slice(0, 5);
-}
-
-// HTML 转义
-function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-}
-
-// 获取并缓存用户信息
-async function getUserMeta(uid) {
-    if (userMetaCache.has(uid)) return userMetaCache.get(uid);
-    const snap = await db.collection('users').doc(uid).get();
-    const data = { uid, ...(snap.exists ? snap.data() : {}) };
-    userMetaCache.set(uid, data);
-    return data;
 }
 
 // 加载公开广场
 async function loadPublicSquare() {
     try {
         const square = document.getElementById('public-square');
-        if (!square) {
-            console.error('未找到 public-square 元素');
-            return;
-        }
+        if (!square) return;
         square.innerHTML = '<h2>公开广场</h2>';
 
         const querySnapshot = await db.collection('stories')
@@ -504,6 +456,7 @@ async function loadPublicSquare() {
                 <p>${escapeHtml(data.story)}</p>
                 <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
                 <p>点赞: ${data.likes || 0}</p>
+                <p>粉丝数: ${followersCount}</p>
                 <div class="button-group">
                     <button onclick="likeStory('${doc.id}')">点赞</button>
                     ${me && me.uid !== author.uid ? `
@@ -523,6 +476,50 @@ async function loadPublicSquare() {
         }
     } catch (error) {
         console.error('加载公开广场失败:', error);
+    }
+}
+
+// 加载我的存档
+async function loadArchive() {
+    try {
+        const archive = document.getElementById('archive');
+        if (!archive) return;
+        archive.innerHTML = '<h2>我的存档</h2>';
+
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const querySnapshot = await db.collection('stories')
+            .where('userId', '==', user.uid)
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+
+        for (const doc of querySnapshot.docs) {
+            const data = doc.data();
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="user-info">
+                    <img src="${data.userAvatar}" alt="User avatar" class="avatar">
+                    <span>${escapeHtml(data.userName || '匿名用户')}</span>
+                </div>
+                <img src="${data.photoUrl}" alt="Story image">
+                <p>${escapeHtml(data.story)}</p>
+                <p>标签: ${(data.tags || []).map(escapeHtml).join(', ')}</p>
+                <p>点赞: ${data.likes || 0}</p>
+                <div class="cmt-row">
+                    <input id="comment-${doc.id}" placeholder="添加评论...">
+                    <button onclick="addComment('${doc.id}')">评论</button>
+                </div>
+                <div class="comments">
+                    ${(data.comments || []).map(c => `<div class="comment">${escapeHtml(c)}</div>`).join('')}
+                </div>
+            `;
+            archive.appendChild(card);
+        }
+    } catch (error) {
+        console.error('加载我的存档失败:', error);
     }
 }
 
@@ -567,10 +564,7 @@ async function addComment(id) {
 async function loadTags() {
     try {
         const tagSquare = document.getElementById('tag-square');
-        if (!tagSquare) {
-            console.error('未找到 tag-square 元素');
-            return;
-        }
+        if (!tagSquare) return;
         tagSquare.innerHTML = '<h2>标签广场</h2>';
 
         const tagsMap = {};
@@ -631,7 +625,7 @@ async function searchStories() {
             const matchCount = (data.story.toLowerCase().match(new RegExp(keyword, 'g')) || []).length;
             if (matchCount > 0) {
                 allStories.push({ ...data, id: doc.id, matchCount });
-            });
+            }
         });
 
         allStories.sort((a, b) => b.matchCount - a.matchCount).slice(0, 5).forEach(story => {
@@ -690,6 +684,7 @@ async function toggleFollow(targetUserId) {
     await loadMessagesList({ silent: true });
 }
 
+// 检查是否互关
 async function isMutualFollow(uidA, uidB) {
     if (!uidA || !uidB) return false;
     const [a, b] = await Promise.all([
@@ -831,29 +826,6 @@ async function loadMessagesList(options = {}) {
     }
 }
 
-// 在 DOM 加载完成后绑定事件
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM 加载完成，绑定事件');
-    const registerBtn = document.getElementById('register-btn');
-    const loginBtn = document.getElementById('login-btn');
-    if (registerBtn) {
-        registerBtn.addEventListener('click', () => {
-            console.log('注册按钮点击');
-            register();
-        });
-    } else {
-        console.error('未找到 register-btn 元素');
-    }
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
-            console.log('登录按钮点击');
-            login();
-        });
-    } else {
-        console.error('未找到 login-btn 元素');
-    }
-});
-
 // 导出全局函数
 window.showSection = showSection;
 window.register = register;
@@ -868,4 +840,3 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
-
