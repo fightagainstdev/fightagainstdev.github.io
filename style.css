@@ -22,6 +22,7 @@ body {
     height: 100%;
 }
 
+/* 侧边栏 */
 .sidebar {
     width: 240px;
     background-color: #202225;
@@ -49,30 +50,34 @@ body {
     margin: 0;
 }
 
-.sidebar li { margin: 8px 0; }
+.sidebar li { margin: 6px 0; }
 
 .sidebar button {
-    width: 100%;
-    padding: 10px 20px;
+    width: calc(100% - 16px);
+    padding: 10px 14px;
+    margin: 2px 8px;
     background: none;
     border: none;
-    color: var(--text-dark);
+    color: #b9bbbe;
     text-align: left;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
+    border-radius: 4px;
 }
 
 .sidebar button:hover {
-    background-color: var(--accent);
+    background-color: #3f4248;
     color: #fff;
 }
 
+/* 主内容 */
 .main-content {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
     background-color: #36393f;
+    color: #dcddde;
 }
 
 .section {
@@ -80,12 +85,13 @@ body {
     margin: 0 auto;
 }
 
+/* 卡片（Discord风格面板） */
 .card {
-    background-color: var(--bg-dark);
-    padding: 20px;
+    background-color: #2f3136;
+    padding: 16px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    margin-bottom: 16px;
     animation: fadeIn 0.3s ease-in;
 }
 
@@ -94,6 +100,7 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* 表单控件 */
 input, select {
     background-color: #40444b;
     border: none;
@@ -127,6 +134,7 @@ button:hover { background-color: #4752c4; }
 
 .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* 图片 & 评论 */
 .story-output { margin-top: 20px; }
 .story-output img { max-width: 200px; border-radius: 4px; }
 
@@ -166,7 +174,7 @@ a:hover { text-decoration: underline; }
 .message.success { background: rgba(88,101,242,0.15); color: #fff; }
 .message.error { background: rgba(255, 86, 86, 0.2); color: #ffb3b3; }
 
-/* ----------- 私信布局 ----------- */
+/* 私信布局 */
 .messages-layout {
     display: grid;
     grid-template-columns: 320px 1fr;
