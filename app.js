@@ -74,6 +74,7 @@ async function getUserMeta(uid) {
 }
 
 // 监听登录状态
+// 监听登录状态
 auth.onAuthStateChanged(user => {
     console.log('Auth state changed:', user ? `User logged in: ${user.uid}` : 'User logged out');
     if (user) {
@@ -86,13 +87,14 @@ auth.onAuthStateChanged(user => {
         loadMessagesList({ silent: true });
     } else {
         document.getElementById('auth-section').style.display = 'block';
+        // 修复：在这里定义sections数组
+        const sections = ['main-section', 'public-square', 'tag-square', 'archive', 'search-section', 'profile-section', 'messages-section'];
         sections.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
     }
 });
-
 // 注册
 async function register() {
     const emailInput = document.getElementById('email');
@@ -851,3 +853,4 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
