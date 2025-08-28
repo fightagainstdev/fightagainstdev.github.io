@@ -2,7 +2,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyCgrvfNp7L8d_nyx8ycNb8Lc_UUSllG0Pg",
     authDomain: "photo-story-app.firebaseapp.com",
     projectId: "photo-story-app",
-    storageBucket: "photo-story-app.firebasestorage.app",
+    storageBucket: "photo-story-app.appspot.com",
     messagingSenderId: "571174185577",
     appId: "1:571174185577:web:35e312c16feb1efb6b10f8"
 };
@@ -840,3 +840,4 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
