@@ -309,26 +309,37 @@ async function updateProfile() {
 
 // 上传照片并生成故事
 async function uploadAndGenerate() {
-    const file = document.getElementById('photo-upload').files[0];
-    if (!file) return alert('请选择一张照片');
+    const fileInput = document.getElementById('photo-upload');
+    const storyOutput = document.getElementById('story-output');
+    if (!fileInput || !storyOutput) {
+        console.error('未找到 photo-upload 或 story-output 元素');
+        alert('页面加载错误，请刷新重试');
+        return;
+    }
 
-    document.getElementById('story-output').innerHTML = '<p>正在上传图片...</p>';
+    const file = fileInput.files[0];
+    if (!file) {
+        storyOutput.innerHTML = `<p style="color:red;">请选择一张照片</p>`;
+        return;
+    }
+
+    storyOutput.innerHTML = '<p>正在验证文件...</p>';
+    console.log('文件信息:', { name: file.name, size: file.size, type: file.type });
 
     try {
         const user = auth.currentUser;
         if (!user) {
-            alert('请先登录');
+            storyOutput.innerHTML = `<p style="color:red;">请先登录</p>`;
             return;
         }
 
-        console.log('用户已登录:', user.uid);
-        console.log('选择的文件:', file.name, file.size, file.type);
-
         if (!file.type.startsWith('image/')) {
+            storyOutput.innerHTML = `<p style="color:red;">请选择有效的图片文件</p>`;
             throw new Error('请选择有效的图片文件');
         }
 
         if (file.size > 5 * 1024 * 1024) {
+            storyOutput.innerHTML = `<p style="color:red;">文件太大，请选择小于5MB的图片</p>`;
             throw new Error('文件太大，请选择小于5MB的图片');
         }
 
@@ -336,97 +347,90 @@ async function uploadAndGenerate() {
         const fileName = `${timestamp}_${file.name}`;
         const photoRef = storage.ref(`photos/${user.uid}/${fileName}`);
         
-        console.log('开始上传到:', photoRef.fullPath);
-        
-        document.getElementById('story-output').innerHTML = '<p>正在上传图片到QURUI AI...</p>';
-        
+        console.log('Storage ref:', photoRef.fullPath);
+        storyOutput.innerHTML = '<p>正在上传图片...</p>';
+
         const uploadTask = photoRef.put(file);
         
         uploadTask.on('state_changed', 
             (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            document.getElementById('story-output').innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
-            console.log('上传进度:', progress + '%');
-        }, 
-        (error) => {
-            console.error('上传错误:', error);
-            document.getElementById('story-output').innerHTML = `<p style="color:red;">上传失败: ${error.message}</p>`;
-        }, 
-        async () => {
-            console.log('上传完成');
-            const photoUrl = await photoRef.getDownloadURL();
-            console.log('获取到图片URL:', photoUrl);
-            // 继续生成故事逻辑...
-        }
-    );
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('上传进度:', progress.toFixed(1) + '%', {
+                    bytesTransferred: snapshot.bytesTransferred,
+                    totalBytes: snapshot.totalBytes
+                });
+                storyOutput.innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
+            }, 
+            (error) => {
+                console.error('上传错误:', error);
+                storyOutput.innerHTML = `<p style="color:red;">上传失败: ${error.message}</p>`;
+            }, 
+            async () => {
+                console.log('上传完成');
+                const photoUrl = await photoRef.getDownloadURL();
+                console.log('获取到图片URL:', photoUrl);
 
+                if (!photoUrl) {
+                    throw new Error('无法获取图片URL');
+                }
 
-        await uploadTask;
-        console.log('图片上传完成');
-        
-        const photoUrl = await photoRef.getDownloadURL();
-        console.log('获取到图片URL:', photoUrl);
+                storyOutput.innerHTML = '<p>正在生成故事...</p>';
 
-        if (!photoUrl) {
-            throw new Error('无法获取图片URL');
-        }
+                let story = '';
+                try {
+                    console.log('调用云函数，参数:', { photoUrl });
+                    const callable = functions.httpsCallable('generateStory');
+                    const resp = await callable({ photoUrl: photoUrl });
+                    console.log('云函数返回:', resp);
+                    
+                    const d = resp.data || {};
+                    if (d.story) {
+                        story = d.story;
+                    } else if (d.choices && d.choices[0]?.message?.content) {
+                        story = d.choices[0].message.content;
+                    } else if (typeof d === 'string') {
+                        story = d;
+                    } else {
+                        story = '生成的故事内容为空';
+                    }
+                } catch (err) {
+                    console.error('generateStory 调用失败:', err);
+                    story = `生成故事时出错: ${err.message || err.toString()}`;
+                }
 
-        document.getElementById('story-output').innerHTML = '<p>正在生成故事...</p>';
+                const tags = extractTags(story);
 
-        let story = '';
-        try {
-            console.log('调用云函数，参数:', { photoUrl });
-            const callable = functions.httpsCallable('generateStory');
-            const resp = await callable({ photoUrl: photoUrl });
-            console.log('云函数返回:', resp);
-            
-            const d = resp.data || {};
-            if (d.story) {
-                story = d.story;
-            } else if (d.choices && d.choices[0]?.message?.content) {
-                story = d.choices[0].message.content;
-            } else if (typeof d === 'string') {
-                story = d;
-            } else {
-                story = '生成的故事内容为空';
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data() || {};
+
+                await db.collection('stories').add({
+                    userId: user.uid,
+                    userName: userData.userName || '匿名用户',
+                    userAvatar: userData.avatarUrl || 'https://via.placeholder.com/100x100?text=Avatar',
+                    photoUrl,
+                    story,
+                    tags,
+                    privacy: document.getElementById('privacy').value,
+                    likes: 0,
+                    comments: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                loadPublicSquare();
+                loadArchive();
+                loadTags();
+
+                storyOutput.innerHTML = `
+                    <div class="story-result">
+                        <p>${escapeHtml(story)}</p>
+                        <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
+                    </div>
+                `;
             }
-        } catch (err) {
-            console.error('generateStory 调用失败:', err);
-            story = `生成故事时出错: ${err.message || err.toString()}`;
-        }
-
-        const tags = extractTags(story);
-
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data() || {};
-
-        await db.collection('stories').add({
-            userId: user.uid,
-            userName: userData.userName || '匿名用户',
-            userAvatar: userData.avatarUrl || 'https://via.placeholder.com/100x100?text=Avatar',
-            photoUrl,
-            story,
-            tags,
-            privacy: document.getElementById('privacy').value,
-            likes: 0,
-            comments: [],
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        loadPublicSquare();
-        loadArchive();
-        loadTags();
-
-        document.getElementById('story-output').innerHTML = `
-            <div class="story-result">
-                <p>${escapeHtml(story)}</p>
-                <img src="${photoUrl}" alt="Uploaded photo" style="max-width: 100%; margin-top: 10px;">
-            </div>
-        `;
-
+        );
     } catch (error) {
         console.error('详细错误信息:', error);
-        document.getElementById('story-output').innerHTML = `<p style="color: #ff9999;">错误: ${error.message}</p>`;
+        storyOutput.innerHTML = `<p style="color:red;">错误: ${error.message}</p>`;
     }
 }
 
@@ -739,7 +743,7 @@ async function openDM(targetUid) {
                 snap.forEach(doc => {
                     const m = doc.data();
                     const mine = m.from === me.uid;
-                    const bubble = document.createElement('div');
+                    bubble = document.createElement('div');
                     bubble.className = `bubble ${mine ? 'mine' : 'theirs'}`;
                     bubble.textContent = m.text;
                     historyEl.appendChild(bubble);
@@ -847,5 +851,3 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
-
-
