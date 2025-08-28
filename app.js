@@ -369,11 +369,17 @@ async function uploadAndGenerate() {
             }, 
             async () => {
                 console.log('上传完成');
-                const photoUrl = await photoRef.getDownloadURL();
-                console.log('获取到图片URL:', photoUrl);
-
-                if (!photoUrl) {
-                    throw new Error('无法获取图片URL');
+                let photoUrl;
+                try {
+                    photoUrl = await photoRef.getDownloadURL();
+                    console.log('获取到图片URL:', photoUrl);
+                    if (!photoUrl) {
+                        throw new Error('获取图片URL失败');
+                    }
+                } catch (urlError) {
+                    console.error('获取URL失败:', urlError);
+                    storyOutput.innerHTML = `<p style="color:red;">获取图片URL失败: ${urlError.message}</p>`;
+                    return;
                 }
 
                 storyOutput.innerHTML = '<p>正在生成故事...</p>';
@@ -853,6 +859,7 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
 
 
 
