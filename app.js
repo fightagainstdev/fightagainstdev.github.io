@@ -68,7 +68,7 @@ function showSection(sectionId) {
 async function getUserMeta(uid) {
     if (userMetaCache.has(uid)) return userMetaCache.get(uid);
     const doc = await db.collection('users').doc(uid).get();
-    const data = doc.exists ? doc.data() : { userName: '匿名用户', avatarUrl: 'https://placehold.co/100x100?text=Avatar&font=roboto', followers: [] };
+    const data = doc.exists ? doc.data() : { userName: '匿名用户', avatarUrl: 'https://fightagainstdev.github.io/default-avatar.png', followers: [] };
     userMetaCache.set(uid, data);
     return data;
 }
@@ -126,7 +126,7 @@ async function register() {
 
         await db.collection('users').doc(user.uid).set({
             userName: email.split('@')[0],
-            avatarUrl: 'https://placehold.co/100x100?text=Avatar&font=roboto',
+            avatarUrl: 'https://fightagainstdev.github.io/default-avatar.png',
             followers: [],
             following: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -414,7 +414,7 @@ async function uploadAndGenerate() {
                 await db.collection('stories').add({
                     userId: user.uid,
                     userName: userData.userName || '匿名用户',
-                    userAvatar: userData.avatarUrl || 'https://placehold.co/100x100?text=Avatar&font=roboto',
+                    userAvatar: userData.avatarUrl || 'https://fightagainstdev.github.io/default-avatar.png',
                     photoUrl,
                     story,
                     tags,
@@ -859,6 +859,7 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
 
 
 
