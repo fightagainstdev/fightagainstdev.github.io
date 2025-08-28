@@ -344,15 +344,22 @@ async function uploadAndGenerate() {
         
         uploadTask.on('state_changed', 
             (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                document.getElementById('story-output').innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
-                console.log('上传进度:', progress + '%');
-            }, 
-            (error) => {
-                console.error('上传错误:', error);
-                throw error;
-            }
-        );
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            document.getElementById('story-output').innerHTML = `<p>上传进度: ${progress.toFixed(1)}%</p>`;
+            console.log('上传进度:', progress + '%');
+        }, 
+        (error) => {
+            console.error('上传错误:', error);
+            document.getElementById('story-output').innerHTML = `<p style="color:red;">上传失败: ${error.message}</p>`;
+        }, 
+        async () => {
+            console.log('上传完成');
+            const photoUrl = await photoRef.getDownloadURL();
+            console.log('获取到图片URL:', photoUrl);
+            // 继续生成故事逻辑...
+        }
+    );
+
 
         await uploadTask;
         console.log('图片上传完成');
@@ -840,4 +847,5 @@ window.addComment = addComment;
 window.toggleFollow = toggleFollow;
 window.openDM = openDM;
 window.sendMessage = sendMessage;
+
 
