@@ -67,7 +67,7 @@ function gameOver()
     updateStatusElement(scoreContainerElem,"none")
     updateStatusElement(roundContainerElem,"none")
 
-    const gameOverMessage = `Game Over! Final Score - <span class = 'badge'>${score}</span> Click 'Play Game' button to play again`
+    const gameOverMessage = `游戏结束！最终分数 - <span class = 'badge'>${score}</span> 点'开始游戏'以开始下一局
 
     updateStatusElement(currentGameStatusElem,"block",primaryColor,gameOverMessage)
 
@@ -100,7 +100,7 @@ function chooseCard(card)
 
         setTimeout(() => {
             flipCards(false)
-            updateStatusElement(currentGameStatusElem,"block", primaryColor,"Card positions revealed")
+            updateStatusElement(currentGameStatusElem,"block", primaryColor,"卡片所有位置已显示")
 
             endRound()
 
@@ -139,7 +139,7 @@ function calculateScore()
 function updateScore()
 {
     calculateScore()
-    updateStatusElement(scoreElem, "block", primaryColor, `Score <span class='badge'>${score}</span>`)
+    updateStatusElement(scoreElem, "block", primaryColor, `分数 <span class='badge'>${score}</span>`)
 
 }
 
@@ -159,11 +159,11 @@ function outputChoiceFeedBack(hit)
 {
     if(hit)
     {
-        updateStatusElement(currentGameStatusElem, "block", winColor, "Hit!! - Well Done!! :)")
+        updateStatusElement(currentGameStatusElem, "block", winColor, "找到了!超厉害 :)")
     }
     else
     {
-        updateStatusElement(currentGameStatusElem, "block", loseColor, "Missed!! :(")
+        updateStatusElement(currentGameStatusElem, "block", loseColor, "失败！！ :(")
     }
 }
 
@@ -214,7 +214,7 @@ function checkForIncompleteGame()
         }
         else
         {
-            if(confirm('Would you like to continue with your last game?'))
+            if(confirm('要继续游戏嘛？'))
             {
                 score = gameObj.score
                 roundNum = gameObj.round
@@ -241,8 +241,8 @@ function initializeNewGame(){
     updateStatusElement(scoreContainerElem,"flex")
     updateStatusElement(roundContainerElem,"flex")
 
-    updateStatusElement(scoreElem,"block",primaryColor,`Score <span class='badge'>${score}</span>`)
-    updateStatusElement(roundElem,"block",primaryColor,`Round <span class='badge'>${roundNum}</span>`)
+    updateStatusElement(scoreElem,"block",primaryColor,`分数 <span class='badge'>${score}</span>`)
+    updateStatusElement(roundElem,"block",primaryColor,`回合 <span class='badge'>${roundNum}</span>`)
 
 }
 function startRound()
@@ -262,9 +262,9 @@ function initializeNewRound()
     shufflingInProgress = true
     cardsRevealed = false
 
-    updateStatusElement(currentGameStatusElem, "block", primaryColor, "Shuffling...")
+    updateStatusElement(currentGameStatusElem, "block", primaryColor, "正在洗牌...")
     
-    updateStatusElement(roundElem, "block", primaryColor, `Round <span class='badge'>${roundNum}</span>`)
+    updateStatusElement(roundElem, "block", primaryColor, `回合 <span class='badge'>${roundNum}</span>`)
 
 }
 
@@ -385,7 +385,7 @@ function shuffleCards()
             shufflingInProgress = false
             removeShuffleClasses()
             dealCards()
-            updateStatusElement(currentGameStatusElem, "block", primaryColor, "Please click the card that you think is the Ace of Spades...")
+            updateStatusElement(currentGameStatusElem, "block", primaryColor, "请点击你认为是黑桃A的牌...")
 
         }
         else{
