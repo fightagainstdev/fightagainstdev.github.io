@@ -1,29 +1,27 @@
-<div class="chess-board" [class.rotated]="flipMode">
+<div class="chess-board-card">
+  <div class="chess-board" [class.rotated]="flipMode">
     <div *ngFor="let row of chessBoardView; let x = index" class="row">
-        <div *ngFor="let piece of row; let y = index" class="square"
-            [class.dark]="isSquareDark(x, y)"
-            [class.light]="!isSquareDark(x, y)"
-            [class.selected-square]="isSquareSelected(x, y)"
-            [class.last-move]="isSquareLastMove(x, y)"
-            [class.king-in-check]="isSquareChecked(x, y)"
-            [class.promotion-square]="isSquarePromotionSquare(x, y)"
-            (click)="move(x, y)">
-            <div [class.safe-square]="isSquareSafeForSelectedPiece(x, y)"></div>
-            <img *ngIf="piece" [src]="getPieceImagePath(piece)" [alt]="piece" class="piece" [class.rotated]="flipMode">
-        </div>
+      <div *ngFor="let piece of row; let y = index" class="square"
+        [class.dark]="isSquareDark(x, y)"
+        [class.light]="!isSquareDark(x, y)"
+        [class.selected-square]="isSquareSelected(x, y)"
+        [class.last-move]="isSquareLastMove(x, y)"
+        [class.king-in-check]="isSquareChecked(x, y)"
+        [class.promotion-square]="isSquarePromotionSquare(x, y)"
+        (click)="move(x, y)">
+        <div [class.safe-square]="isSquareSafeForSelectedPiece(x, y)"></div>
+        <img *ngIf="piece" [src]="getPieceImagePath(piece)" [alt]="piece" class="piece" [class.rotated]="flipMode">
+      </div>
     </div>
-</div>
-
-<button (click)="flipBoard()">翻转棋盘</button>
-
-<h2 *ngIf="gameOverMessage" class="game-over-message">
+  </div>
+  <button class="flip-btn" (click)="flipBoard()">翻转棋盘</button>
+  <h2 *ngIf="gameOverMessage" class="game-over-message">
     {{gameOverMessage}}
-</h2>
-
-<div *ngIf="isPromotionActive" class="promotion-dialog">
+  </h2>
+  <div *ngIf="isPromotionActive" class="promotion-dialog">
     <img *ngFor="let piece of promotionPieces()" [src]="getPieceImagePath(piece)" (click)="promotePiece(piece)">
     <span class="close-promotion-dialog" (click)="closePawnPromotionDialog()">&times;</span>
-</div>
-
-<app-move-list [moveList]="moveList" [gameHistoryPointer]="gameHistoryPointer" [gameHistoryLength]="gameHistory.length"
+  </div>
+  <app-move-list [moveList]="moveList" [gameHistoryPointer]="gameHistoryPointer" [gameHistoryLength]="gameHistory.length"
     (showPreviousPositionEvent)="showPreviousPosition($event)"></app-move-list>
+</div>
