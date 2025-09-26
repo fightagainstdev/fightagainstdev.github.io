@@ -1,5 +1,5 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withHashLocation } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { AppComponent } from './app/app.component';
 import { ChessBoardComponent } from './app/modules/chess-board/chess-board.component';
@@ -12,7 +12,7 @@ const appRoutes = [
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideRouter(appRoutes),
+    provideRouter(appRoutes, withHashLocation()),
     provideHttpClient()
   ]
 }).catch(err => console.error(err));
